@@ -520,6 +520,9 @@ const el = {
   btnExportAnnualCsv: document.getElementById('btn-export-annual-csv'),
   btnExportJson: document.getElementById('btn-export-json'),
   inputImportJson: document.getElementById('input-import-json'),
+  btnClearMonthMenu: document.getElementById('btn-clear-month-menu'),
+  labelClearMonth: document.getElementById('label-clear-month'),
+  btnClearMonthExpenses: document.getElementById('btn-clear-month-expenses'),
   btnClearExpenses: document.getElementById('btn-clear-expenses'),
   btnResetDemo: document.getElementById('btn-reset-demo'),
 
@@ -2513,6 +2516,21 @@ function downloadFile(content, fileName, mimeType) {
   URL.revokeObjectURL(url);
 }
 
+function clearCurrentMonthExpenses() {
+  const monthName = MONTH_NAMES[selectedMonth];
+  const count = (appState.expenses || []).filter(e => Number(e.year) === selectedYear && Number(e.month) === selectedMonth).length;
+  if (count === 0) {
+    showToast(`No expenses found in ${monthName} ${selectedYear} to clear.`);
+    return;
+  }
+  if (confirm(`Are you sure you want to clear all ${count} expense(s) for ${monthName} ${selectedYear}? Other months and payment methods will remain untouched.`)) {
+    appState.expenses = (appState.expenses || []).filter(e => !(Number(e.year) === selectedYear && Number(e.month) === selectedMonth));
+    saveStateToStorage();
+    renderAll();
+    showToast(`Cleared ${count} expense(s) for ${monthName} ${selectedYear}.`);
+  }
+}
+
 function clearAllExpenses() {
   if (confirm('Are you sure you want to clear all expenses? Your payment methods, journals, and accounts will be preserved.')) {
     appState.expenses = [];
@@ -2566,6 +2584,9 @@ function renderAll() {
   renderExpenseTable();
   initDailyJournal();
   renderCharts();
+  if (el.labelClearMonth) {
+    el.labelClearMonth.textContent = `Clear ${MONTH_NAMES[selectedMonth]} ${selectedYear} Expenses`;
+  }
   if (activeView === 'annual-view') {
     renderAnnualView();
   }
@@ -2957,6 +2978,12 @@ function initEventListeners() {
   el.btnExportAnnualCsv.addEventListener('click', exportAnnualCsv);
   el.btnExportJson.addEventListener('click', exportJsonBackup);
   el.inputImportJson.addEventListener('change', importJsonBackup);
+  if (el.btnClearMonthMenu) {
+    el.btnClearMonthMenu.addEventListener('click', clearCurrentMonthExpenses);
+  }
+  if (el.btnClearMonthExpenses) {
+    el.btnClearMonthExpenses.addEventListener('click', clearCurrentMonthExpenses);
+  }
   if (el.btnClearExpenses) {
     el.btnClearExpenses.addEventListener('click', clearAllExpenses);
   }
