@@ -731,6 +731,9 @@ function initTimeline() {
 }
 
 function renderYearOptions() {
+  if (!el.yearSelect) return;
+  if (!appState) appState = getSampleSeedData();
+  if (!appState.years || !Array.isArray(appState.years)) appState.years = [2026];
   el.yearSelect.innerHTML = '';
   if (!appState.years.includes(2026)) {
     appState.years.push(2026);
@@ -1401,6 +1404,9 @@ function deleteExpense(id) {
 // Configurable Payment Methods
 // -----------------------------------------------------------------------------
 function populatePaymentMethodSelect() {
+  if (!el.expensePaymentMethod) return;
+  if (!appState) appState = getSampleSeedData();
+  if (!appState.paymentMethods || !Array.isArray(appState.paymentMethods)) appState.paymentMethods = DEFAULT_PAYMENT_METHODS;
   el.expensePaymentMethod.innerHTML = '';
   appState.paymentMethods.forEach(pm => {
     const opt = document.createElement('option');
@@ -3514,17 +3520,36 @@ function renderUsersList() {
 // App Initialization
 // -----------------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
-  // Setup initial timeline & selected date
-  const now = new Date();
+  // 1. Immediately ensure active session and state are loaded so appState is never null
+  currentSession = getActiveSession();
+  appState = loadState(currentSession ? currentSession.username : 'srujani');
+
+  // 2. Setup initial timeline & selected date
   selectedYear = 2026;
   selectedMonth = 0; // January 2026 default
   selectedJournalDate = '2026-01-02';
 
+  // 3. Initialize all DOM components and listeners safely
   initTimeline();
   initEventListeners();
   populatePaymentMethodSelect();
+  updateUserNavUi();
 
-  // Listen to Firebase Auth state
+  // 4. Apply saved theme
+  if (appState && appState.theme) {
+    applyTheme(appState.theme);
+  }
+
+  // 5. Gate visibility based on session
+  if (!currentSession) {
+    showAuthOverlay();
+    setCloudSyncStatus('offline', 'Sign In');
+  } else {
+    hideAuthOverlay();
+    renderAll();
+  }
+
+  // 6. Listen to Firebase Auth state
   if (fbAuth) {
     fbAuth.onAuthStateChanged((user) => {
       if (user) {
@@ -3550,20 +3575,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
-  } else {
-    currentSession = getActiveSession();
-    if (!currentSession) {
-      showAuthOverlay();
-      updateUserNavUi();
-    } else {
-      hideAuthOverlay();
-      appState = loadState(currentSession.username);
-      updateUserNavUi();
-      if (appState.theme) applyTheme(appState.theme);
-      renderAll();
-    }
   }
 
-  // Fetch live exchange rates in background
+  // 7. Fetch live exchange rates in background
   fetchLiveExchangeRates();
 });
