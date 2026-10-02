@@ -483,7 +483,6 @@ const el = {
 
   // Side Menu & Analytics Tabs
   btnToggleSideMenu: document.getElementById('btn-toggle-side-menu'),
-  btnFloatingSideMenu: document.getElementById('btn-floating-side-menu'),
   btnCloseSideMenu: document.getElementById('btn-close-side-menu'),
   btnDockSideMenu: document.getElementById('btn-dock-side-menu'),
   sideMenuOverlay: document.getElementById('side-menu-overlay'),
@@ -2906,9 +2905,6 @@ function initEventListeners() {
   // Side Menu Toggles & Controls
   if (el.btnToggleSideMenu) {
     el.btnToggleSideMenu.addEventListener('click', toggleSideMenu);
-  }
-  if (el.btnFloatingSideMenu) {
-    el.btnFloatingSideMenu.addEventListener('click', toggleSideMenu);
   }
   if (el.btnCloseSideMenu) {
     el.btnCloseSideMenu.addEventListener('click', closeSideMenu);
