@@ -198,9 +198,25 @@ function getSampleSeedData() {
   };
 }
 
-// Global State
-const STORAGE_KEY = 'expense_app_data_v1';
-let appState = loadState();
+// Authentication & Multi-User State Keys
+const USERS_STORAGE_KEY = 'expense_app_users_v1';
+const SESSION_STORAGE_KEY = 'expense_app_session_v1';
+const LEGACY_STORAGE_KEY = 'expense_app_data_v1';
+
+// Initial pre-configured admin user: srujani / sera123
+const INITIAL_USERS = [
+  {
+    username: 'srujani',
+    name: 'Srujani',
+    role: 'admin',
+    passwordHash: 'cc13d3ace8aeeae58b21c3313d19999ff905538924b12e02680987ef46a702cb', // sha256("sera123")
+    createdAt: '2026-01-01'
+  }
+];
+
+// Active Session & Global State
+let currentSession = null;
+let appState = null;
 let selectedYear = 2026;
 let selectedMonth = 0; // January
 let selectedJournalDate = '2026-01-02'; // default day in Jan 2026
@@ -209,10 +225,80 @@ let journalDebounceTimer = null;
 let liveFxStatus = 'Base: INR (₹)';
 let currentCcCycleMode = 'due-month'; // 'due-month' or 'post-due'
 
-// Initialize state
-function loadState() {
+// Password hashing using Web Crypto SHA-256
+async function hashPassword(str) {
+  const enc = new TextEncoder().encode(str);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function getUsersList() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(USERS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.warn('Error reading users list:', e);
+  }
+  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_USERS));
+  return [...INITIAL_USERS];
+}
+
+function saveUsersList(users) {
+  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+}
+
+function getActiveSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const users = getUsersList();
+      const match = users.find(u => u.username.toLowerCase() === (parsed.username || '').toLowerCase());
+      if (match) {
+        return { ...match, loginTime: parsed.loginTime };
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading active session:', e);
+  }
+  return null;
+}
+
+function setActiveSession(user) {
+  const sess = {
+    username: user.username,
+    name: user.name,
+    role: user.role,
+    loginTime: new Date().toISOString()
+  };
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sess));
+  currentSession = sess;
+}
+
+function clearActiveSession() {
+  localStorage.removeItem(SESSION_STORAGE_KEY);
+  currentSession = null;
+}
+
+function getUserStorageKey(username) {
+  const uname = (username || (currentSession && currentSession.username) || 'srujani').toLowerCase();
+  return `expense_app_data_v1_${uname}`;
+}
+
+// Initialize state per user
+function loadState(targetUsername) {
+  const uname = (targetUsername || (currentSession && currentSession.username) || 'srujani').toLowerCase();
+  const key = getUserStorageKey(uname);
+  try {
+    let raw = localStorage.getItem(key);
+    // If target user is srujani and no specific key exists yet, check legacy storage key
+    if (!raw && uname === 'srujani') {
+      raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    }
+
     if (raw) {
       const parsed = JSON.parse(raw);
 
@@ -261,7 +347,6 @@ function loadState() {
         });
         const hasHdfcDiners = parsed.paymentMethods.some(pm => pm.name.toLowerCase().includes('diners'));
         if (!hasHdfcDiners) {
-          // Insert HDFC Diners right after ICICI VISA
           parsed.paymentMethods.splice(2, 0, {
             id: 'pm_hdfc_diners',
             name: 'HDFC Diners Credit Card',
@@ -270,6 +355,8 @@ function loadState() {
             dueDay: 20
           });
         }
+      } else {
+        parsed.paymentMethods = [...DEFAULT_PAYMENT_METHODS];
       }
 
       // Ensure credit card payments array exists
@@ -317,19 +404,29 @@ function loadState() {
         });
       }
 
+      // Save into the per-user key
+      localStorage.setItem(key, JSON.stringify(parsed));
       return parsed;
     }
   } catch (err) {
     console.warn('Failed to load saved state, falling back to seed data:', err);
   }
+
   const seed = getSampleSeedData();
-  saveStateToStorage(seed);
+  if (uname !== 'srujani') {
+    // For non-admin new accounts, start with empty expenses & journals
+    seed.expenses = [];
+    seed.journals = {};
+    seed.creditCardPayments = [];
+  }
+  localStorage.setItem(key, JSON.stringify(seed));
   return seed;
 }
 
 function saveStateToStorage(state = appState) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const key = getUserStorageKey();
+    localStorage.setItem(key, JSON.stringify(state));
   } catch (err) {
     console.error('Error saving state:', err);
   }
@@ -464,6 +561,41 @@ const el = {
   btnExportJson: document.getElementById('btn-export-json'),
   inputImportJson: document.getElementById('input-import-json'),
   btnResetDemo: document.getElementById('btn-reset-demo'),
+
+  // User Profile & Authentication Elements
+  authOverlay: document.getElementById('auth-overlay'),
+  authForm: document.getElementById('auth-form'),
+  authUsername: document.getElementById('auth-username'),
+  authPassword: document.getElementById('auth-password'),
+  btnToggleAuthPwd: document.getElementById('btn-toggle-auth-pwd'),
+  pwdIconEye: document.getElementById('pwd-icon-eye'),
+  authError: document.getElementById('auth-error'),
+  authErrorText: document.getElementById('auth-error-text'),
+  btnAuthSubmit: document.getElementById('btn-auth-submit'),
+
+  userProfileDropdown: document.getElementById('user-profile-dropdown'),
+  btnUserProfile: document.getElementById('btn-user-profile'),
+  userProfileMenuContent: document.getElementById('user-profile-menu-content'),
+  userNavAvatar: document.getElementById('user-nav-avatar'),
+  userNavName: document.getElementById('user-nav-name'),
+  userMenuAvatar: document.getElementById('user-menu-avatar'),
+  userMenuFullname: document.getElementById('user-menu-fullname'),
+  userMenuSub: document.getElementById('user-menu-sub'),
+  userMenuRole: document.getElementById('user-menu-role'),
+  btnOpenUserMgmt: document.getElementById('btn-open-user-mgmt'),
+  btnSwitchUser: document.getElementById('btn-switch-user'),
+  btnLogout: document.getElementById('btn-logout'),
+
+  // Admin User Management Modal
+  userManagementModal: document.getElementById('user-management-modal'),
+  btnCloseUserMgmt: document.getElementById('btn-close-user-mgmt'),
+  btnDoneUserMgmt: document.getElementById('btn-done-user-mgmt'),
+  addUserForm: document.getElementById('add-user-form'),
+  newUsername: document.getElementById('new-user-username'),
+  newName: document.getElementById('new-user-name'),
+  newPassword: document.getElementById('new-user-password'),
+  newRole: document.getElementById('new-user-role'),
+  usersListContainer: document.getElementById('users-list-container'),
 
   // Toast
   toast: document.getElementById('toast')
@@ -2687,11 +2819,168 @@ function initEventListeners() {
   el.btnBackupMenu.addEventListener('click', (e) => {
     e.stopPropagation();
     el.backupMenuContent.classList.toggle('show');
+    if (el.userProfileMenuContent) el.userProfileMenuContent.classList.remove('show');
   });
 
+  // User Profile Dropdown Toggle
+  if (el.btnUserProfile && el.userProfileMenuContent) {
+    el.btnUserProfile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      el.userProfileMenuContent.classList.toggle('show');
+      el.backupMenuContent.classList.remove('show');
+    });
+  }
+
+  // Close dropdowns on backdrop / window click
   document.addEventListener('click', () => {
     el.backupMenuContent.classList.remove('show');
+    if (el.userProfileMenuContent) el.userProfileMenuContent.classList.remove('show');
   });
+
+  // Switch User
+  if (el.btnSwitchUser) {
+    el.btnSwitchUser.addEventListener('click', () => {
+      if (el.userProfileMenuContent) el.userProfileMenuContent.classList.remove('show');
+      showAuthOverlay();
+    });
+  }
+
+  // Logout
+  if (el.btnLogout) {
+    el.btnLogout.addEventListener('click', () => {
+      if (el.userProfileMenuContent) el.userProfileMenuContent.classList.remove('show');
+      clearActiveSession();
+      updateUserNavUi();
+      showAuthOverlay();
+      showToast('You have signed out.');
+    });
+  }
+
+  // Toggle Auth Password Visibility
+  if (el.btnToggleAuthPwd) {
+    el.btnToggleAuthPwd.addEventListener('click', toggleAuthPasswordVisibility);
+  }
+
+  // Authentication Form Submit
+  if (el.authForm) {
+    el.authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const uname = (el.authUsername.value || '').trim().toLowerCase();
+      const pwd = el.authPassword.value || '';
+      if (!uname || !pwd) return;
+
+      if (el.btnAuthSubmit) {
+        el.btnAuthSubmit.disabled = true;
+        el.btnAuthSubmit.textContent = 'Verifying...';
+      }
+
+      try {
+        const users = getUsersList();
+        const user = users.find(u => u.username.toLowerCase() === uname);
+        if (!user) {
+          showAuthError('User does not exist. Please contact Administrator (Srujani).');
+          return;
+        }
+
+        const hash = await hashPassword(pwd);
+        if (hash !== user.passwordHash) {
+          showAuthError('Incorrect password. Please try again.');
+          return;
+        }
+
+        // Successful authentication
+        setActiveSession(user);
+        appState = loadState(user.username);
+        updateUserNavUi();
+        hideAuthOverlay();
+        populatePaymentMethodSelect();
+        renderAll();
+        showToast(`Welcome back, ${user.name}!`);
+      } catch (err) {
+        console.error('Authentication error:', err);
+        showAuthError('Authentication error. Please retry.');
+      } finally {
+        if (el.btnAuthSubmit) {
+          el.btnAuthSubmit.disabled = false;
+          el.btnAuthSubmit.textContent = 'Sign In';
+        }
+      }
+    });
+  }
+
+  // Open User Management Modal (Admin only)
+  if (el.btnOpenUserMgmt) {
+    el.btnOpenUserMgmt.addEventListener('click', () => {
+      if (el.userProfileMenuContent) el.userProfileMenuContent.classList.remove('show');
+      if (!currentSession || currentSession.role !== 'admin') {
+        showToast('Admin privilege required.');
+        return;
+      }
+      renderUsersList();
+      if (typeof el.userManagementModal.showModal === 'function') {
+        el.userManagementModal.showModal();
+      } else {
+        el.userManagementModal.setAttribute('open', '');
+      }
+    });
+  }
+
+  if (el.btnCloseUserMgmt) {
+    el.btnCloseUserMgmt.addEventListener('click', () => {
+      if (typeof el.userManagementModal.close === 'function') {
+        el.userManagementModal.close();
+      } else {
+        el.userManagementModal.removeAttribute('open');
+      }
+    });
+  }
+
+  if (el.btnDoneUserMgmt) {
+    el.btnDoneUserMgmt.addEventListener('click', () => {
+      if (typeof el.userManagementModal.close === 'function') {
+        el.userManagementModal.close();
+      } else {
+        el.userManagementModal.removeAttribute('open');
+      }
+    });
+  }
+
+  // Add User Form Submission (Admin)
+  if (el.addUserForm) {
+    el.addUserForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const uname = (el.newUsername.value || '').trim().toLowerCase();
+      const name = (el.newName.value || '').trim();
+      const pwd = el.newPassword.value || '';
+      const role = el.newRole.value || 'member';
+
+      if (!uname || !name || !pwd) return;
+
+      const users = getUsersList();
+      if (users.some(u => u.username.toLowerCase() === uname)) {
+        alert(`Username "${uname}" already exists! Please choose another.`);
+        return;
+      }
+
+      const hash = await hashPassword(pwd);
+      const newUser = {
+        username: uname,
+        name: name,
+        role: role,
+        passwordHash: hash,
+        createdAt: new Date().toISOString()
+      };
+      users.push(newUser);
+      saveUsersList(users);
+
+      // Initialize clean data store for this user
+      loadState(uname);
+
+      el.addUserForm.reset();
+      showToast(`User @${uname} created!`);
+      renderUsersList();
+    });
+  }
 
   el.btnExportCsv.addEventListener('click', exportMonthCsv);
   el.btnExportAnnualCsv.addEventListener('click', exportAnnualCsv);
@@ -2700,7 +2989,7 @@ function initEventListeners() {
   el.btnResetDemo.addEventListener('click', resetToDemo);
 
   // Close modals on backdrop click
-  [el.expenseModal, el.paymentMethodsModal, el.creditCardDuesModal].forEach(modal => {
+  [el.expenseModal, el.paymentMethodsModal, el.creditCardDuesModal, el.userManagementModal].forEach(modal => {
     if (modal) {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) modal.close();
@@ -2710,9 +2999,164 @@ function initEventListeners() {
 }
 
 // -----------------------------------------------------------------------------
+// Authentication & User Profile UI Functions
+// -----------------------------------------------------------------------------
+function updateUserNavUi() {
+  if (!currentSession) {
+    if (el.btnUserProfile) el.btnUserProfile.style.display = 'none';
+    return;
+  }
+  if (el.btnUserProfile) el.btnUserProfile.style.display = 'inline-flex';
+  const initial = (currentSession.name || currentSession.username || 'U').charAt(0).toUpperCase();
+  if (el.userNavAvatar) el.userNavAvatar.textContent = initial;
+  if (el.userNavName) el.userNavName.textContent = currentSession.name || currentSession.username;
+  if (el.userMenuAvatar) el.userMenuAvatar.textContent = initial;
+  if (el.userMenuFullname) el.userMenuFullname.textContent = currentSession.name || currentSession.username;
+  if (el.userMenuRole) {
+    el.userMenuRole.textContent = currentSession.role === 'admin' ? 'Admin' : 'Member';
+    el.userMenuRole.className = `role-badge ${currentSession.role === 'admin' ? 'role-admin' : 'role-member'}`;
+  }
+  if (el.userMenuSub) {
+    el.userMenuSub.innerHTML = `@${escapeHtml(currentSession.username)} • <span class="role-badge ${currentSession.role === 'admin' ? 'role-admin' : 'role-member'}">${currentSession.role === 'admin' ? 'Admin' : 'Member'}</span>`;
+  }
+  if (el.btnOpenUserMgmt) {
+    el.btnOpenUserMgmt.style.display = currentSession.role === 'admin' ? 'flex' : 'none';
+  }
+}
+
+function showAuthOverlay() {
+  if (el.authOverlay) {
+    el.authOverlay.classList.remove('auth-hidden');
+    if (el.authError) el.authError.style.display = 'none';
+    if (el.authUsername) {
+      el.authUsername.value = '';
+      setTimeout(() => el.authUsername.focus(), 50);
+    }
+    if (el.authPassword) el.authPassword.value = '';
+  }
+}
+
+function hideAuthOverlay() {
+  if (el.authOverlay) {
+    el.authOverlay.classList.add('auth-hidden');
+  }
+}
+
+function showAuthError(msg) {
+  if (el.authError && el.authErrorText) {
+    el.authErrorText.textContent = msg;
+    el.authError.style.display = 'flex';
+  }
+}
+
+let isAuthPasswordVisible = false;
+function toggleAuthPasswordVisibility() {
+  isAuthPasswordVisible = !isAuthPasswordVisible;
+  if (el.authPassword) {
+    el.authPassword.type = isAuthPasswordVisible ? 'text' : 'password';
+  }
+  if (el.pwdIconEye) {
+    el.pwdIconEye.innerHTML = isAuthPasswordVisible
+      ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+      : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  }
+}
+
+function renderUsersList() {
+  if (!el.usersListContainer) return;
+  const users = getUsersList();
+  el.usersListContainer.innerHTML = '';
+
+  users.forEach(u => {
+    const card = document.createElement('div');
+    card.className = 'user-card';
+
+    let txCount = 0;
+    try {
+      const uData = loadState(u.username);
+      txCount = (uData.expenses || []).length;
+    } catch(e) {}
+
+    const isCurrentActive = currentSession && currentSession.username.toLowerCase() === u.username.toLowerCase();
+    const isSrujani = u.username.toLowerCase() === 'srujani';
+
+    card.innerHTML = `
+      <div class="user-card-info">
+        <div class="user-avatar-circle" style="width: 36px; height: 36px; font-size: 0.95rem;">${(u.name || u.username).charAt(0).toUpperCase()}</div>
+        <div class="user-card-meta">
+          <div class="user-card-name-row">
+            <span class="user-card-title">${escapeHtml(u.name)}</span>
+            <span class="role-badge ${u.role === 'admin' ? 'role-admin' : 'role-member'}">${u.role === 'admin' ? 'Admin' : 'Member'}</span>
+            ${isCurrentActive ? '<span class="badge" style="font-size: 0.65rem; background: var(--primary-soft); color: var(--primary);">Active</span>' : ''}
+          </div>
+          <span class="user-card-sub">@${escapeHtml(u.username)} • ${txCount} ${txCount === 1 ? 'expense' : 'expenses'}</span>
+        </div>
+      </div>
+      <div class="user-card-actions">
+        <button type="button" class="btn btn-secondary btn-sm btn-reset-user-pwd" data-username="${escapeHtml(u.username)}" title="Reset user password">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Reset Pwd
+        </button>
+        ${!isSrujani && !isCurrentActive ? `
+        <button type="button" class="btn btn-secondary btn-sm text-danger btn-delete-user" data-username="${escapeHtml(u.username)}" title="Delete user profile">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>` : ''}
+      </div>
+    `;
+    el.usersListContainer.appendChild(card);
+  });
+
+  // Attach Reset Password listeners
+  el.usersListContainer.querySelectorAll('.btn-reset-user-pwd').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const targetUname = btn.getAttribute('data-username');
+      const newPwd = prompt(`Enter new password for @${targetUname}:`);
+      if (newPwd === null) return;
+      if (newPwd.trim().length < 4) {
+        alert('Password must be at least 4 characters long.');
+        return;
+      }
+      const users = getUsersList();
+      const match = users.find(u => u.username.toLowerCase() === targetUname.toLowerCase());
+      if (match) {
+        match.passwordHash = await hashPassword(newPwd.trim());
+        saveUsersList(users);
+        showToast(`Password updated for @${targetUname}`);
+      }
+    });
+  });
+
+  // Attach Delete User listeners
+  el.usersListContainer.querySelectorAll('.btn-delete-user').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetUname = btn.getAttribute('data-username');
+      if (confirm(`Are you sure you want to delete profile @${targetUname}? Their expenses and settings will be permanently removed.`)) {
+        let users = getUsersList();
+        users = users.filter(u => u.username.toLowerCase() !== targetUname.toLowerCase());
+        saveUsersList(users);
+        localStorage.removeItem(getUserStorageKey(targetUname));
+        showToast(`Profile @${targetUname} deleted.`);
+        renderUsersList();
+      }
+    });
+  });
+}
+
+// -----------------------------------------------------------------------------
 // App Initialization
 // -----------------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
+  // Check active session
+  currentSession = getActiveSession();
+  if (!currentSession) {
+    showAuthOverlay();
+    appState = loadState('srujani');
+  } else {
+    hideAuthOverlay();
+    appState = loadState(currentSession.username);
+  }
+  updateUserNavUi();
+
   // Apply saved theme
   if (appState.theme) {
     applyTheme(appState.theme);
