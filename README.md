@@ -2,7 +2,26 @@
 
 A modern, responsive, and private web-based expense tracker with **Daily Journaling**, configurable payment methods, and live exchange rate conversion starting from **January 2026**.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FSrujaniBishoi%2FResponseapp)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FSrujaniBishoi%2FExpenseApp)
+
+---
+
+## 🎨 Design System Revamp (UI/UX Pro Max)
+
+The interface has been comprehensively revamped following the **[Claude Code UI/UX Skill](https://github.com/nicohodt/claude-code-ui-ux-skill)** (`ui-ux-pro-max`) design intelligence system:
+- **Fintech & Personal Finance System**:
+  - High-trust midnight slate palette (`#090d16` to `#111827`) with subtle ambient radial glow and glassmorphic card elevations (`backdrop-filter: blur(14px)`).
+  - Clean light mode canvas with high-contrast text meeting verified WCAG AA standards (4.5:1+ contrast ratio).
+- **Tabular Numerics (`tnum`)**:
+  - `font-variant-numeric: tabular-nums` enforced on all financial figures, table amounts, metric cards, and calendar dates to eliminate layout shift and jitter.
+- **Lucide SVG Icon Architecture**:
+  - All raw emojis replaced with clean, balanced inline SVG vector icons for a crisp, enterprise-grade aesthetic.
+- **Micro-Interactions & Physics**:
+  - Smooth 150ms–250ms cubic-bezier transitions (`cubic-bezier(0.16, 1, 0.3, 1)`), hover lifts, and tactile active press states.
+- **Keyboard Navigation & Accessibility**:
+  - Visible focus rings (`:focus-visible: 2px solid var(--primary)`) with offsets, pointer cursors on all interactive elements, and `prefers-reduced-motion` compliance.
+
+---
 
 ## 🚀 Getting Started
 
@@ -16,7 +35,7 @@ Start-Process "C:\Users\my\.gemini\antigravity\scratch\expense-app\index.html"
 
 ---
 
-## ✨ Features & Recent Updates
+## ✨ Features & Capabilities
 
 ### 1. 🇮🇳 INR (₹) Default Currency with Live Exchange Rates
 - **Base Currency**: Stored and managed in Indian Rupees (**INR ₹**) with Indian number formatting (`₹25,000.00`).
@@ -28,9 +47,9 @@ Start-Process "C:\Users\my\.gemini\antigravity\scratch\expense-app\index.html"
 - **Interactive Monthly Calendar Grid**: A full 7-column calendar navigation widget (`Su` to `Sa`) for each month.
   - **1-Click Day Selection**: Click any day of the month to immediately view and edit notes for that date.
   - **Visual Status Dots**:
-    - 🟣 **Purple Dot**: Daily journal note exists for this day.
+    - 🟣 **Violet Dot**: Daily journal note exists for this day.
     - 🟢 **Green Dot**: Expenses recorded on this day.
-    - 🟠 **Orange Dot**: Both notes and expenses exist for this day.
+    - 🟠 **Amber Dot**: Both notes and expenses exist for this day.
   - **Month Navigation Controls**: Fast `<` and `>` buttons to jump between months directly from the calendar, plus a `Today` quick-jump button.
 - **Daily Spend Summary**: Live counter showing how much money was spent on that specific day and across how many transactions.
 - **Clickable Table Date Links**: Clicking any date in the expense table directly selects and highlights that day on the calendar.
@@ -67,16 +86,16 @@ Start-Process "C:\Users\my\.gemini\antigravity\scratch\expense-app\index.html"
   - **Total Payments Made**: Total payments recorded towards credit card bills (highlighted in success green).
   - **Remaining Due / Payable**: Net balance still owed (`Spent - Payments Made`).
   - **Card-by-Card Billing Breakdown**:
-    - Exact cycle date tags: `🗓️ Cycle: 2026-09-21 to 2026-10-20 • Due: 2026-10-20`.
+    - Exact cycle date tags: `Cycle: 2026-09-21 to 2026-10-20 • Due: 2026-10-20`.
     - **`+ Record Payment` Button**: Record payments made towards any card's bill with payment date, amount, reference mode, and automatic linkage to the billing cycle.
     - **Payment History Log**: Complete audit log of payments made with date, amount, and notes.
     - **Inline Due Date Configuration**: Update due day (`1-31`) directly for each card with instant recalculation.
     - **Dynamic Due Status Badges**:
-      - `✅ Fully Paid`: Bill completely cleared!
-      - `🟡 Partially Paid`: Balance remaining with countdown to due date.
-      - `🔴 Unpaid / Past Due / Due Today`: Clear alerts before bills become overdue.
+      - `Fully Paid`: Bill completely cleared!
+      - `Partially Paid`: Balance remaining with countdown to due date.
+      - `Unpaid / Past Due / Due Today`: Clear alerts before bills become overdue.
 - **Daily Journal Integration**:
-  - Days with credit card bill payments reflect the payment in the day's financial summary and monthly calendar tooltip (e.g., `💳 ₹1,200.00 bill payment made towards ICICI VISA Credit Card`).
+  - Days with credit card bill payments reflect the payment in the day's financial summary and monthly calendar tooltip (e.g., `₹1,200.00 bill payment made towards ICICI VISA Credit Card`).
 
 ### 5. 🏷️ Configurable & Editable Payment Methods
 - Configured payment methods: **UPI / GPay / PhonePe**, **ICICI VISA Credit Card**, **HDFC Diners Credit Card**, **Debit Card**, **Cash**, **Net Banking / NEFT**, and **Amex Card**.
