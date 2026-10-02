@@ -1498,7 +1498,7 @@ function renderCreditCardDuesModal() {
       if (postDueAmt > 0) {
         postDueAlertHtml = `
           <div class="cc-post-due-alert">
-            <span>⚡ <strong>${postDueExpenses.length} post-due ${postDueExpenses.length === 1 ? 'expense' : 'expenses'} (${formatCurrency(postDueAmt)})</strong> incurred in ${MONTH_SHORT[selectedMonth]} after due date (${cycle.dueDay}th). Billed in ${MONTH_SHORT[postCycle.targetMonth]} (due ${postCycle.dueDay} ${MONTH_SHORT[postCycle.targetMonth]}).</span>
+            <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><strong>${postDueExpenses.length} post-due ${postDueExpenses.length === 1 ? 'expense' : 'expenses'} (${formatCurrency(postDueAmt)})</strong> incurred in ${MONTH_SHORT[selectedMonth]} after due date (${cycle.dueDay}th). Billed in ${MONTH_SHORT[postCycle.targetMonth]} (due ${postCycle.dueDay} ${MONTH_SHORT[postCycle.targetMonth]}).</span>
             <button type="button" class="cc-btn-switch-cycle" data-switch-to="post-due">View in Next Cycle →</button>
           </div>
         `;
@@ -1507,7 +1507,7 @@ function renderCreditCardDuesModal() {
       // In post-due mode, show an explanatory chip
       postDueAlertHtml = `
         <div class="cc-post-due-alert" style="background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.25); color: var(--primary);">
-          <span>🔄 <strong>Active Rolling Cycle:</strong> Showing charges incurred from ${escapeHtml(cycle.startDateStr)} to ${escapeHtml(cycle.endDateStr)} (due on ${cycle.dueDay} ${MONTH_SHORT[cycle.targetMonth]} ${cycle.targetYear}).</span>
+          <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg><strong>Active Rolling Cycle:</strong> Showing charges incurred from ${escapeHtml(cycle.startDateStr)} to ${escapeHtml(cycle.endDateStr)} (due on ${cycle.dueDay} ${MONTH_SHORT[cycle.targetMonth]} ${cycle.targetYear}).</span>
           <button type="button" class="cc-btn-switch-cycle" style="background: var(--primary); color: #fff;" data-switch-to="due-month">← Back to Billed Due</button>
         </div>
       `;
@@ -1528,7 +1528,7 @@ function renderCreditCardDuesModal() {
         statusClass = 'status-no-dues';
       }
     } else if (cardRemainingDue === 0) {
-      statusText = `✅ Fully Paid (${formatCurrency(cardPaid)})`;
+      statusText = `Fully Paid (${formatCurrency(cardPaid)})`;
       statusClass = 'status-fully-paid';
     } else if (diffDays < 0) {
       statusText = (cardPaid > 0) ? `Partially Paid (Past due ${Math.abs(diffDays)}d ago)` : `Past due (${Math.abs(diffDays)}d ago)`;
@@ -1550,7 +1550,7 @@ function renderCreditCardDuesModal() {
           <span class="cc-card-badge" style="background-color: ${pm.color};"></span>
           <div>
             <div class="cc-card-title">${escapeHtml(pm.name)}</div>
-            <div class="cc-card-type">💳 ${escapeHtml(pm.type)} • Monthly due day: <strong>${cycle.configuredDueDay}th</strong></div>
+            <div class="cc-card-type"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:3px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>${escapeHtml(pm.type)} • Monthly due day: <strong>${cycle.configuredDueDay}th</strong></div>
           </div>
         </div>
         <div class="cc-financial-grid">
@@ -1574,7 +1574,7 @@ function renderCreditCardDuesModal() {
           <label class="cc-due-label" for="due-day-input-${pm.id}">Due Day:</label>
           <input type="number" id="due-day-input-${pm.id}" class="cc-due-day-input" min="1" max="31" value="${cycle.configuredDueDay}" title="Enter day of month (1-31) when this card's bill is due">
           <div class="cc-cycle-range-tag" title="Billing cycle: spendings from day after prev due date till this due date">
-            🗓️ Cycle: ${escapeHtml(cycle.startDateStr)} to ${escapeHtml(cycle.endDateStr)} • Due: ${escapeHtml(cycle.dueDateStr)}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:3px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Cycle: ${escapeHtml(cycle.startDateStr)} to ${escapeHtml(cycle.endDateStr)} • Due: ${escapeHtml(cycle.dueDateStr)}
           </div>
           <span class="cc-due-status-badge ${statusClass}">${statusText}</span>
         </div>
@@ -1607,7 +1607,7 @@ function renderCreditCardDuesModal() {
           <div class="cc-cycle-tx-item">
             <div>
               <div class="cc-cycle-tx-desc">${escapeHtml(item.description)}</div>
-              <div class="cc-cycle-tx-date">📅 ${escapeHtml(item.date)} • ${escapeHtml(item.category)}${item.notes ? ` • 📝 ${escapeHtml(item.notes)}` : ''}</div>
+              <div class="cc-cycle-tx-date"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:2px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${escapeHtml(item.date)} • ${escapeHtml(item.category)}${item.notes ? ` • ${escapeHtml(item.notes)}` : ''}</div>
             </div>
             <div class="cc-cycle-tx-amt">${formatCurrency(item.amount)}</div>
           </div>
@@ -1616,7 +1616,7 @@ function renderCreditCardDuesModal() {
 
       <!-- Inline Record Bill Payment Form (Toggled by Button) -->
       <div class="cc-inline-pay-form" id="pay-form-${pm.id}" style="display: none;">
-        <div class="cc-pay-form-title">💳 Record Bill Payment for ${escapeHtml(pm.name)} (Due ${escapeHtml(cycle.dueDateStr)})</div>
+        <div class="cc-pay-form-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:4px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Record Bill Payment for ${escapeHtml(pm.name)} (Due ${escapeHtml(cycle.dueDateStr)})</div>
         <div class="cc-pay-form-row">
           <div class="cc-pay-form-group">
             <label for="pay-date-${pm.id}">Payment Date</label>
@@ -1651,7 +1651,7 @@ function renderCreditCardDuesModal() {
           ` : cardPayments.map(p => `
             <div class="cc-payment-item">
               <div class="cc-payment-details">
-                <span class="cc-payment-date">🗓️ ${escapeHtml(p.date)}</span>
+                <span class="cc-payment-date"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle; margin-right:3px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${escapeHtml(p.date)}</span>
                 <span class="cc-payment-amount">+ ${formatCurrency(p.amount)}</span>
                 ${p.notes ? `<span class="cc-payment-notes">— ${escapeHtml(p.notes)}</span>` : ''}
               </div>
@@ -1916,17 +1916,17 @@ function initDailyJournal() {
 
   const summaryParts = [];
   if (dayItems.length > 0) {
-    summaryParts.push(`💸 <strong>${formatCurrency(dayTotalInInr)}</strong> spent today across ${dayItems.length} ${dayItems.length === 1 ? 'entry' : 'entries'}`);
+    summaryParts.push(`<span class="inline-summary-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:3px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><strong>${formatCurrency(dayTotalInInr)}</strong> spent today across ${dayItems.length} ${dayItems.length === 1 ? 'entry' : 'entries'}</span>`);
   }
   if (dayPayments.length > 0) {
     const cardNames = dayPayments.map(p => getPaymentMethod(p.paymentMethodId).name).join(', ');
-    summaryParts.push(`💳 <strong>${formatCurrency(dayPaymentsTotal)}</strong> bill payment made (${escapeHtml(cardNames)})`);
+    summaryParts.push(`<span class="inline-summary-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:3px;"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><strong>${formatCurrency(dayPaymentsTotal)}</strong> bill payment made (${escapeHtml(cardNames)})</span>`);
   }
 
   if (summaryParts.length > 0) {
     el.journalDayExpensesSummary.innerHTML = summaryParts.join(' • ');
   } else {
-    el.journalDayExpensesSummary.textContent = '✨ No expenses or bill payments recorded on this day';
+    el.journalDayExpensesSummary.innerHTML = '<span style="color: var(--text-dim);">No expenses or bill payments recorded on this day</span>';
   }
 
   // Load daily journal text
