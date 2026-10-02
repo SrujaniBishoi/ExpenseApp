@@ -361,47 +361,7 @@ function loadState(targetUsername) {
 
       // Ensure credit card payments array exists
       if (!Array.isArray(parsed.creditCardPayments)) {
-        parsed.creditCardPayments = [
-          {
-            id: 'ccpay_202601_1',
-            year: 2026,
-            month: 0,
-            paymentMethodId: 'pm_credit',
-            date: '2026-01-15',
-            amount: 1200.00,
-            notes: 'Paid restaurant dinner balance via UPI / GPay'
-          }
-        ];
-      }
-
-      // Ensure HDFC Diners sample expense exists for Jan 2026 demonstration
-      if (parsed.expenses && !parsed.expenses.some(e => e.id === 'exp_202601_8')) {
-        parsed.expenses.push({
-          id: 'exp_202601_8',
-          year: 2026,
-          month: 0,
-          date: '2026-01-20',
-          description: 'Flight Tickets for Business Summit',
-          category: 'Travel',
-          amount: 6500.00,
-          paymentMethodId: 'pm_hdfc_diners',
-          notes: 'HDFC Diners air miles & lounge access'
-        });
-      }
-
-      // Ensure HDFC Diners sample expense exists for Sept demonstration (post-due spend for Oct bill)
-      if (parsed.expenses && !parsed.expenses.some(e => e.id === 'exp_202609_hdfc')) {
-        parsed.expenses.push({
-          id: 'exp_202609_hdfc',
-          year: 2026,
-          month: 8, // September (0-indexed)
-          date: '2026-09-22',
-          description: 'Electronics & Gadgets Purchase',
-          category: 'Shopping',
-          amount: 4500.00,
-          paymentMethodId: 'pm_hdfc_diners',
-          notes: 'HDFC Diners post-due spend (incurred 22 Sep after 20 Sep due date, billed in Oct bill due 20 Oct)'
-        });
+        parsed.creditCardPayments = [];
       }
 
       // Save into the per-user key
@@ -560,6 +520,7 @@ const el = {
   btnExportAnnualCsv: document.getElementById('btn-export-annual-csv'),
   btnExportJson: document.getElementById('btn-export-json'),
   inputImportJson: document.getElementById('input-import-json'),
+  btnClearExpenses: document.getElementById('btn-clear-expenses'),
   btnResetDemo: document.getElementById('btn-reset-demo'),
 
   // User Profile & Authentication Elements
@@ -2552,6 +2513,16 @@ function downloadFile(content, fileName, mimeType) {
   URL.revokeObjectURL(url);
 }
 
+function clearAllExpenses() {
+  if (confirm('Are you sure you want to clear all expenses? Your payment methods, journals, and accounts will be preserved.')) {
+    appState.expenses = [];
+    appState.creditCardPayments = [];
+    saveStateToStorage();
+    renderAll();
+    showToast('All expenses cleared.');
+  }
+}
+
 function resetToDemo() {
   if (confirm('Are you sure you want to reset to sample data starting January 2026? Any custom data will be replaced.')) {
     appState = getSampleSeedData();
@@ -2986,6 +2957,9 @@ function initEventListeners() {
   el.btnExportAnnualCsv.addEventListener('click', exportAnnualCsv);
   el.btnExportJson.addEventListener('click', exportJsonBackup);
   el.inputImportJson.addEventListener('change', importJsonBackup);
+  if (el.btnClearExpenses) {
+    el.btnClearExpenses.addEventListener('click', clearAllExpenses);
+  }
   el.btnResetDemo.addEventListener('click', resetToDemo);
 
   // Close modals on backdrop click
@@ -3073,8 +3047,11 @@ function renderUsersList() {
 
     let txCount = 0;
     try {
-      const uData = loadState(u.username);
-      txCount = (uData.expenses || []).length;
+      const rawUser = localStorage.getItem(getUserStorageKey(u.username));
+      if (rawUser) {
+        const uData = JSON.parse(rawUser);
+        txCount = (uData.expenses || []).length;
+      }
     } catch(e) {}
 
     const isCurrentActive = currentSession && currentSession.username.toLowerCase() === u.username.toLowerCase();
