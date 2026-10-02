@@ -30,12 +30,12 @@ const FALLBACK_RATES_FROM_INR = {
 
 const CURRENCY_SYMBOLS = {
   INR: '₹',
-  USD: '$',
+  USD: 'USD ',
   EUR: '€',
   GBP: '£',
   AED: 'AED ',
-  CAD: 'C$',
-  AUD: 'A$',
+  CAD: 'CAD ',
+  AUD: 'AUD ',
   JPY: '¥'
 };
 
@@ -1916,7 +1916,7 @@ function initDailyJournal() {
 
   const summaryParts = [];
   if (dayItems.length > 0) {
-    summaryParts.push(`<span class="inline-summary-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:3px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><strong>${formatCurrency(dayTotalInInr)}</strong> spent today across ${dayItems.length} ${dayItems.length === 1 ? 'entry' : 'entries'}</span>`);
+    summaryParts.push(`<span class="inline-summary-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:3px;"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/><circle cx="17" cy="14" r="1"/></svg><strong>${formatCurrency(dayTotalInInr)}</strong> spent today across ${dayItems.length} ${dayItems.length === 1 ? 'entry' : 'entries'}</span>`);
   }
   if (dayPayments.length > 0) {
     const cardNames = dayPayments.map(p => getPaymentMethod(p.paymentMethodId).name).join(', ');
