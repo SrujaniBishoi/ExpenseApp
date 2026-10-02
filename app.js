@@ -474,18 +474,22 @@ const el = {
   btnAddFutureYear: document.getElementById('btn-add-future-year'),
   monthPills: document.getElementById('month-pills'),
 
-  // Metrics
+  // Metrics (Clean 2-Card Layout)
   statTotalSpend: document.getElementById('stat-total-spend'),
   statPeriodTag: document.getElementById('stat-period-tag'),
-  statCount: document.getElementById('stat-count'),
-  statDailyAvg: document.getElementById('stat-daily-avg'),
-  statTopCat: document.getElementById('stat-top-cat'),
-  statTopCatAmount: document.getElementById('stat-top-cat-amount'),
-  statTopPayment: document.getElementById('stat-top-payment'),
-  statTopPaymentShare: document.getElementById('stat-top-payment-share'),
   cardCreditCardDues: document.getElementById('card-credit-card-dues'),
   statCcNetSpend: document.getElementById('stat-cc-net-spend'),
   statCcPayable: document.getElementById('stat-cc-payable'),
+
+  // Side Menu & Analytics Tabs
+  btnToggleSideMenu: document.getElementById('btn-toggle-side-menu'),
+  btnFloatingSideMenu: document.getElementById('btn-floating-side-menu'),
+  btnCloseSideMenu: document.getElementById('btn-close-side-menu'),
+  btnDockSideMenu: document.getElementById('btn-dock-side-menu'),
+  sideMenuOverlay: document.getElementById('side-menu-overlay'),
+  sideMenuDrawer: document.getElementById('side-menu-drawer'),
+  sideMenuTabs: document.querySelectorAll('.side-menu-tab-btn'),
+  sideTabPanels: document.querySelectorAll('.side-tab-panel'),
 
   // Credit Card Dues Modal
   creditCardDuesModal: document.getElementById('credit-card-dues-modal'),
@@ -995,14 +999,12 @@ function updateMetrics() {
   const totalInInr = monthItems.reduce((acc, cur) => acc + Number(cur.amount), 0);
   const count = monthItems.length;
 
-  el.statTotalSpend.textContent = formatCurrency(totalInInr);
-  el.statPeriodTag.textContent = `For ${MONTH_NAMES[selectedMonth]} ${selectedYear}`;
-  el.statCount.textContent = count;
+  if (el.statTotalSpend) el.statTotalSpend.textContent = formatCurrency(totalInInr);
+  if (el.statPeriodTag) el.statPeriodTag.textContent = `For ${MONTH_NAMES[selectedMonth]} ${selectedYear}`;
 
   // Daily average in current month
   const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
   const dailyAvgInInr = count > 0 ? (totalInInr / daysInMonth) : 0;
-  el.statDailyAvg.textContent = `Daily Avg: ${formatCurrency(dailyAvgInInr)}`;
 
   // Top Category
   const catSums = {};
@@ -1017,8 +1019,6 @@ function updateMetrics() {
       topCatAmount = amt;
     }
   }
-  el.statTopCat.textContent = topCat;
-  el.statTopCatAmount.textContent = topCatAmount > 0 ? formatCurrency(topCatAmount) : '—';
 
   // Top Payment Method
   const pmSums = {};
@@ -1032,16 +1032,6 @@ function updateMetrics() {
       topPmId = pmId;
       topPmAmt = amt;
     }
-  }
-
-  if (topPmId && totalInInr > 0) {
-    const pm = getPaymentMethod(topPmId);
-    const pct = Math.round((topPmAmt / totalInInr) * 100);
-    el.statTopPayment.textContent = pm.name;
-    el.statTopPaymentShare.textContent = `${pct}% (${formatCurrency(topPmAmt)})`;
-  } else {
-    el.statTopPayment.textContent = '—';
-    el.statTopPaymentShare.textContent = '0% of monthly spend';
   }
 
   // Credit Cards Net Spend, Payments Made & Total Payable at Month End
@@ -1101,14 +1091,41 @@ function updateMetrics() {
     subtextWrap.innerHTML = subHtml;
   }
 
-  // Quick Facts Sidebar
-  updateQuickFacts(monthItems, totalInInr, daysInMonth);
+  // Quick Facts in Side Menu
+  updateQuickFacts(monthItems, totalInInr, daysInMonth, count, dailyAvgInInr, topCat, topCatAmount, topPmId, topPmAmt);
 }
 
-function updateQuickFacts(items, totalInInr, daysInMonth) {
+function updateQuickFacts(items, totalInInr, daysInMonth, count, dailyAvgInInr, topCat, topCatAmount, topPmId, topPmAmt) {
+  if (!el.quickFactsList) return;
   el.quickFactsList.innerHTML = '';
 
   const facts = [];
+  facts.push({
+    title: 'Total Transactions',
+    val: `${count} ${count === 1 ? 'entry' : 'entries'}`
+  });
+
+  facts.push({
+    title: 'Daily Average Spend',
+    val: `${formatCurrency(dailyAvgInInr)} / day`
+  });
+
+  if (topCat && topCat !== '—') {
+    facts.push({
+      title: 'Top Expense Category',
+      val: `${topCat} (${formatCurrency(topCatAmount)})`
+    });
+  }
+
+  if (topPmId && totalInInr > 0) {
+    const pm = getPaymentMethod(topPmId);
+    const pct = Math.round((topPmAmt / totalInInr) * 100);
+    facts.push({
+      title: 'Top Payment Method',
+      val: `${pm.name} (${pct}%)`
+    });
+  }
+
   facts.push({
     title: 'Days in Month',
     val: `${daysInMonth} days`
@@ -1151,14 +1168,14 @@ function updateQuickFacts(items, totalInInr, daysInMonth) {
 
   facts.push({
     title: 'Current FX Rate',
-    val: appState.currency === 'INR' ? 'Base INR (₹)' : `1 ${appState.currency} = ₹${(1 / (appState.exchangeRates[appState.currency] || 1)).toFixed(2)}`
+    val: (appState && appState.currency === 'INR') ? 'Base INR (₹)' : `1 ${appState ? appState.currency : 'INR'} = ₹${(1 / (appState && appState.exchangeRates && appState.exchangeRates[appState.currency] ? appState.exchangeRates[appState.currency] : 1)).toFixed(2)}`
   });
 
   facts.forEach(f => {
     const li = document.createElement('li');
     li.innerHTML = `
-      <span class="fact-title">${f.title}</span>
-      <span class="fact-val">${f.val}</span>
+      <span class="fact-title">${escapeHtml(f.title)}</span>
+      <span class="fact-val">${escapeHtml(f.val)}</span>
     `;
     el.quickFactsList.appendChild(li);
   });
@@ -2494,21 +2511,86 @@ function renderAnnualChart(monthData) {
 }
 
 // -----------------------------------------------------------------------------
-// View Switching
+// View & Side Menu Switching
 // -----------------------------------------------------------------------------
 function switchView(targetView) {
   activeView = targetView;
-  el.viewTabs.forEach(t => {
-    t.classList.toggle('active', t.dataset.view === targetView);
-  });
+  if (el.viewTabs) {
+    el.viewTabs.forEach(t => {
+      t.classList.toggle('active', t.dataset.view === targetView);
+    });
+  }
 
   if (targetView === 'monthly-view') {
-    el.monthlyView.classList.add('active');
-    el.annualView.classList.remove('active');
+    if (el.monthlyView) el.monthlyView.classList.add('active');
+  } else if (targetView === 'annual-view') {
+    openSideMenu('side-annual-summary');
+  }
+}
+
+function openSideMenu(targetTabId = null) {
+  if (!el.sideMenuDrawer) return;
+  el.sideMenuDrawer.classList.add('open');
+  if (el.sideMenuOverlay) el.sideMenuOverlay.classList.add('open');
+
+  if (targetTabId) {
+    switchSideTab(targetTabId);
   } else {
-    el.monthlyView.classList.remove('active');
-    el.annualView.classList.add('active');
+    const currentActive = document.querySelector('.side-menu-tab-btn.active');
+    if (currentActive) {
+      switchSideTab(currentActive.dataset.sideTab);
+    } else {
+      switchSideTab('side-annual-summary');
+    }
+  }
+}
+
+function closeSideMenu() {
+  if (!el.sideMenuDrawer) return;
+  el.sideMenuDrawer.classList.remove('open');
+  if (el.sideMenuOverlay) el.sideMenuOverlay.classList.remove('open');
+}
+
+function toggleSideMenu() {
+  if (!el.sideMenuDrawer) return;
+  if (el.sideMenuDrawer.classList.contains('open')) {
+    closeSideMenu();
+  } else {
+    openSideMenu();
+  }
+}
+
+function switchSideTab(tabId) {
+  if (!tabId) return;
+  const tabBtns = document.querySelectorAll('.side-menu-tab-btn');
+  const tabPanels = document.querySelectorAll('.side-tab-panel');
+
+  tabBtns.forEach(btn => {
+    const isTarget = btn.dataset.sideTab === tabId;
+    btn.classList.toggle('active', isTarget);
+    btn.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+  });
+
+  tabPanels.forEach(panel => {
+    panel.classList.toggle('active', panel.id === tabId);
+  });
+
+  if (tabId === 'side-annual-summary') {
     renderAnnualView();
+  } else if (tabId === 'side-spending-category') {
+    renderCategoryChart();
+  } else if (tabId === 'side-spending-payment') {
+    renderPaymentChart();
+  }
+}
+
+function toggleDockSideMenu() {
+  const isDocked = document.body.classList.toggle('side-menu-docked');
+  if (isDocked) {
+    openSideMenu();
+    showToast('Side Menu pinned to sidebar');
+  } else {
+    showToast('Side Menu in drawer mode');
   }
 }
 
@@ -2821,12 +2903,45 @@ function initEventListeners() {
     }
   });
 
-  // View Tabs
-  el.viewTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      switchView(tab.dataset.view);
+  // Side Menu Toggles & Controls
+  if (el.btnToggleSideMenu) {
+    el.btnToggleSideMenu.addEventListener('click', toggleSideMenu);
+  }
+  if (el.btnFloatingSideMenu) {
+    el.btnFloatingSideMenu.addEventListener('click', toggleSideMenu);
+  }
+  if (el.btnCloseSideMenu) {
+    el.btnCloseSideMenu.addEventListener('click', closeSideMenu);
+  }
+  if (el.sideMenuOverlay) {
+    el.sideMenuOverlay.addEventListener('click', closeSideMenu);
+  }
+  if (el.btnDockSideMenu) {
+    el.btnDockSideMenu.addEventListener('click', toggleDockSideMenu);
+  }
+
+  // Side Menu Tabs Switching
+  document.querySelectorAll('.side-menu-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      switchSideTab(btn.dataset.sideTab);
     });
   });
+
+  // Keyboard shortcut: Escape closes side menu (if not docked)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && el.sideMenuDrawer && el.sideMenuDrawer.classList.contains('open') && !document.body.classList.contains('side-menu-docked')) {
+      closeSideMenu();
+    }
+  });
+
+  // View Tabs (if any)
+  if (el.viewTabs) {
+    el.viewTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        switchView(tab.dataset.view);
+      });
+    });
+  }
 
   // Expense Filtering & Search
   el.expenseSearch.addEventListener('input', () => renderExpenseTable());
