@@ -39,6 +39,32 @@ const CURRENCY_SYMBOLS = {
   JPY: '¥'
 };
 
+// -----------------------------------------------------------------------------
+// Firebase Cloud Backend Configuration & Initialization
+// -----------------------------------------------------------------------------
+const firebaseConfig = {
+  apiKey: "AIzaSyCoA5DenYrdhqpPsdp_t0LOskEV7uSMV8s",
+  authDomain: "expenseapp-dae7e.firebaseapp.com",
+  projectId: "expenseapp-dae7e",
+  storageBucket: "expenseapp-dae7e.firebasestorage.app",
+  messagingSenderId: "432329380893",
+  appId: "1:432329380893:web:a16f70d3c7a0f1a096a2f4"
+};
+
+let fbApp = null;
+let fbAuth = null;
+let fbDb = null;
+
+try {
+  if (typeof firebase !== 'undefined') {
+    fbApp = firebase.initializeApp(firebaseConfig);
+    fbAuth = firebase.auth();
+    fbDb = firebase.firestore();
+  }
+} catch (e) {
+  console.warn('Firebase init notice:', e);
+}
+
 // Initial default payment methods (focused on INR / Indian & global contexts)
 const DEFAULT_PAYMENT_METHODS = [
   { id: 'pm_upi', name: 'UPI / GPay / PhonePe', type: 'UPI / Instant', color: '#8b5cf6' },
@@ -383,12 +409,56 @@ function loadState(targetUsername) {
   return seed;
 }
 
+let cloudSyncDebounceTimer = null;
+
+function setCloudSyncStatus(status, text) {
+  if (!el.cloudSyncStatus) return;
+  el.cloudSyncStatus.className = `cloud-sync-status ${status}`;
+  if (el.cloudSyncText) {
+    el.cloudSyncText.textContent = text || (status === 'syncing' ? 'Syncing...' : status === 'offline' ? 'Offline' : 'Cloud');
+  }
+}
+
+async function syncStateToCloud(userId, state = appState) {
+  if (!fbDb || !userId || !state) return;
+  setCloudSyncStatus('syncing', 'Syncing...');
+  try {
+    const payload = {
+      expenses: state.expenses || [],
+      paymentMethods: state.paymentMethods || [],
+      creditCardPayments: state.creditCardPayments || [],
+      dailyJournals: state.dailyJournals || {},
+      currency: state.currency || 'INR',
+      theme: state.theme || 'dark',
+      exchangeRates: state.exchangeRates || FALLBACK_RATES_FROM_INR,
+      lastUpdated: new Date().toISOString()
+    };
+    await fbDb.collection('users').doc(userId).set(payload, { merge: true });
+    setCloudSyncStatus('ready', 'Cloud');
+  } catch (err) {
+    console.warn('Firestore sync notice:', err);
+    if (err && err.code === 'permission-denied') {
+      setCloudSyncStatus('offline', 'Rule Error');
+    } else {
+      setCloudSyncStatus('offline', 'Offline');
+    }
+  }
+}
+
 function saveStateToStorage(state = appState) {
   try {
     const key = getUserStorageKey();
     localStorage.setItem(key, JSON.stringify(state));
   } catch (err) {
     console.error('Error saving state:', err);
+  }
+
+  // Sync to Cloud Firestore with debounce
+  if (currentSession && currentSession.uid && fbDb) {
+    clearTimeout(cloudSyncDebounceTimer);
+    cloudSyncDebounceTimer = setTimeout(() => {
+      syncStateToCloud(currentSession.uid, state);
+    }, 600);
   }
 }
 
@@ -528,14 +598,29 @@ const el = {
 
   // User Profile & Authentication Elements
   authOverlay: document.getElementById('auth-overlay'),
+  tabAuthLogin: document.getElementById('tab-auth-login'),
+  tabAuthSignup: document.getElementById('tab-auth-signup'),
   authForm: document.getElementById('auth-form'),
   authUsername: document.getElementById('auth-username'),
   authPassword: document.getElementById('auth-password'),
   btnToggleAuthPwd: document.getElementById('btn-toggle-auth-pwd'),
   pwdIconEye: document.getElementById('pwd-icon-eye'),
+  btnForgotPwd: document.getElementById('btn-forgot-pwd'),
   authError: document.getElementById('auth-error'),
   authErrorText: document.getElementById('auth-error-text'),
   btnAuthSubmit: document.getElementById('btn-auth-submit'),
+
+  signupForm: document.getElementById('signup-form'),
+  signupName: document.getElementById('signup-name'),
+  signupEmail: document.getElementById('signup-email'),
+  signupPassword: document.getElementById('signup-password'),
+  btnToggleSignupPwd: document.getElementById('btn-toggle-signup-pwd'),
+  pwdIconEyeSignup: document.getElementById('pwd-icon-eye-signup'),
+  signupConfirmPassword: document.getElementById('signup-confirm-password'),
+  btnSignupSubmit: document.getElementById('btn-signup-submit'),
+
+  cloudSyncStatus: document.getElementById('cloud-sync-status'),
+  cloudSyncText: document.getElementById('cloud-sync-text'),
 
   userProfileDropdown: document.getElementById('user-profile-dropdown'),
   btnUserProfile: document.getElementById('btn-user-profile'),
@@ -2831,16 +2916,24 @@ function initEventListeners() {
 
   // Switch User
   if (el.btnSwitchUser) {
-    el.btnSwitchUser.addEventListener('click', () => {
+    el.btnSwitchUser.addEventListener('click', async () => {
       if (el.userProfileMenuContent) el.userProfileMenuContent.classList.remove('show');
+      if (fbAuth) {
+        try { await fbAuth.signOut(); } catch(e) {}
+      }
+      clearActiveSession();
+      updateUserNavUi();
       showAuthOverlay();
     });
   }
 
   // Logout
   if (el.btnLogout) {
-    el.btnLogout.addEventListener('click', () => {
+    el.btnLogout.addEventListener('click', async () => {
       if (el.userProfileMenuContent) el.userProfileMenuContent.classList.remove('show');
+      if (fbAuth) {
+        try { await fbAuth.signOut(); } catch(e) {}
+      }
       clearActiveSession();
       updateUserNavUi();
       showAuthOverlay();
@@ -2852,49 +2945,186 @@ function initEventListeners() {
   if (el.btnToggleAuthPwd) {
     el.btnToggleAuthPwd.addEventListener('click', toggleAuthPasswordVisibility);
   }
+  if (el.btnToggleSignupPwd) {
+    el.btnToggleSignupPwd.addEventListener('click', toggleSignupPasswordVisibility);
+  }
 
-  // Authentication Form Submit
+  // Auth Tabs (Sign In vs Create Account)
+  if (el.tabAuthLogin) {
+    el.tabAuthLogin.addEventListener('click', () => switchAuthTab('login'));
+  }
+  if (el.tabAuthSignup) {
+    el.tabAuthSignup.addEventListener('click', () => switchAuthTab('signup'));
+  }
+
+  // Forgot Password
+  if (el.btnForgotPwd) {
+    el.btnForgotPwd.addEventListener('click', async () => {
+      let email = (el.authUsername ? el.authUsername.value : '').trim();
+      if (!email || !email.includes('@')) {
+        email = prompt('Enter your registered email address for password reset:');
+      }
+      if (!email) return;
+      if (fbAuth) {
+        try {
+          await fbAuth.sendPasswordResetEmail(email.trim());
+          showToast(`Password reset link sent to ${email}`);
+        } catch (err) {
+          showAuthError(err.message || 'Failed to send reset email.');
+        }
+      } else {
+        alert('Cloud authentication service is currently offline.');
+      }
+    });
+  }
+
+  // Authentication Form Submit (Sign In)
   if (el.authForm) {
     el.authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const uname = (el.authUsername.value || '').trim().toLowerCase();
+      const rawInput = (el.authUsername.value || '').trim();
       const pwd = el.authPassword.value || '';
-      if (!uname || !pwd) return;
+      if (!rawInput || !pwd) return;
 
       if (el.btnAuthSubmit) {
         el.btnAuthSubmit.disabled = true;
-        el.btnAuthSubmit.textContent = 'Verifying...';
+        el.btnAuthSubmit.textContent = 'Signing In...';
       }
 
-      try {
+      // Convert username or email
+      let emailToUse = rawInput.toLowerCase();
+      if (emailToUse === 'srujani') {
+        emailToUse = 'srujanibishoi@gmail.com';
+      } else if (!emailToUse.includes('@')) {
+        emailToUse = `${emailToUse}@expenseapp.local`;
+      }
+
+      if (fbAuth) {
+        try {
+          await fbAuth.signInWithEmailAndPassword(emailToUse, pwd);
+          // onAuthStateChanged handles session, cloud load, and modal closing
+        } catch (fbErr) {
+          console.warn('Firebase signIn notice:', fbErr.code, fbErr.message);
+          // Check local fallback account
+          const users = getUsersList();
+          const localUser = users.find(u => u.username.toLowerCase() === rawInput.toLowerCase());
+          if (localUser) {
+            const hash = await hashPassword(pwd);
+            if (hash === localUser.passwordHash) {
+              setActiveSession(localUser);
+              appState = loadState(localUser.username);
+              updateUserNavUi();
+              hideAuthOverlay();
+              populatePaymentMethodSelect();
+              renderAll();
+              showToast(`Welcome back, ${localUser.name}! (Local)`);
+              if (el.btnAuthSubmit) {
+                el.btnAuthSubmit.disabled = false;
+                el.btnAuthSubmit.textContent = 'Sign In';
+              }
+              return;
+            }
+          }
+
+          let msg = 'Authentication error. Please check your credentials.';
+          if (fbErr.code === 'auth/invalid-credential' || fbErr.code === 'auth/wrong-password' || fbErr.code === 'auth/user-not-found') {
+            msg = 'Invalid email or password. Please verify or click "Create Account".';
+          } else if (fbErr.code === 'auth/too-many-requests') {
+            msg = 'Too many attempts. Please try again later or reset password.';
+          } else if (fbErr.message) {
+            msg = fbErr.message;
+          }
+          showAuthError(msg);
+        }
+      } else {
+        // Fallback local authentication
         const users = getUsersList();
-        const user = users.find(u => u.username.toLowerCase() === uname);
+        const user = users.find(u => u.username.toLowerCase() === rawInput.toLowerCase());
         if (!user) {
           showAuthError('User does not exist. Please contact Administrator (Srujani).');
-          return;
+        } else {
+          const hash = await hashPassword(pwd);
+          if (hash !== user.passwordHash) {
+            showAuthError('Incorrect password. Please try again.');
+          } else {
+            setActiveSession(user);
+            appState = loadState(user.username);
+            updateUserNavUi();
+            hideAuthOverlay();
+            populatePaymentMethodSelect();
+            renderAll();
+            showToast(`Welcome back, ${user.name}!`);
+          }
         }
+      }
 
-        const hash = await hashPassword(pwd);
-        if (hash !== user.passwordHash) {
-          showAuthError('Incorrect password. Please try again.');
-          return;
+      if (el.btnAuthSubmit) {
+        el.btnAuthSubmit.disabled = false;
+        el.btnAuthSubmit.textContent = 'Sign In';
+      }
+    });
+  }
+
+  // Sign Up Form Submit (Create Account)
+  if (el.signupForm) {
+    el.signupForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = (el.signupName.value || '').trim();
+      const email = (el.signupEmail.value || '').trim().toLowerCase();
+      const pwd = el.signupPassword.value || '';
+      const confirmPwd = el.signupConfirmPassword.value || '';
+
+      if (!name || !email || !pwd) return;
+
+      if (pwd !== confirmPwd) {
+        showAuthError('Passwords do not match. Please verify.');
+        return;
+      }
+
+      if (pwd.length < 6) {
+        showAuthError('Password must be at least 6 characters long.');
+        return;
+      }
+
+      if (el.btnSignupSubmit) {
+        el.btnSignupSubmit.disabled = true;
+        el.btnSignupSubmit.textContent = 'Creating Account & Cloud Store...';
+      }
+
+      if (fbAuth) {
+        try {
+          const cred = await fbAuth.createUserWithEmailAndPassword(email, pwd);
+          if (cred && cred.user) {
+            try {
+              await cred.user.updateProfile({ displayName: name });
+            } catch (pErr) {}
+          }
+          showToast(`Account created for ${name}! Initializing cloud data...`);
+          // onAuthStateChanged will handle cloud document setup and session initialization
+        } catch (err) {
+          console.error('Firebase signup error:', err);
+          let msg = 'Failed to create account. Please try again.';
+          if (err.code === 'auth/email-already-in-use') {
+            msg = 'This email is already registered. Please click "Sign In" instead.';
+          } else if (err.code === 'auth/invalid-email') {
+            msg = 'Please enter a valid email address.';
+          } else if (err.code === 'auth/weak-password') {
+            msg = 'Password should be at least 6 characters.';
+          } else if (err.message) {
+            msg = err.message;
+          }
+          showAuthError(msg);
+        } finally {
+          if (el.btnSignupSubmit) {
+            el.btnSignupSubmit.disabled = false;
+            el.btnSignupSubmit.textContent = 'Create Account & Sync Cloud';
+          }
         }
-
-        // Successful authentication
-        setActiveSession(user);
-        appState = loadState(user.username);
-        updateUserNavUi();
-        hideAuthOverlay();
-        populatePaymentMethodSelect();
-        renderAll();
-        showToast(`Welcome back, ${user.name}!`);
-      } catch (err) {
-        console.error('Authentication error:', err);
-        showAuthError('Authentication error. Please retry.');
-      } finally {
-        if (el.btnAuthSubmit) {
-          el.btnAuthSubmit.disabled = false;
-          el.btnAuthSubmit.textContent = 'Sign In';
+      } else {
+        showAuthError('Cloud authentication service is currently not reachable.');
+        if (el.btnSignupSubmit) {
+          el.btnSignupSubmit.disabled = false;
+          el.btnSignupSubmit.textContent = 'Create Account & Sync Cloud';
         }
       }
     });
@@ -3002,6 +3232,133 @@ function initEventListeners() {
 // -----------------------------------------------------------------------------
 // Authentication & User Profile UI Functions
 // -----------------------------------------------------------------------------
+function switchAuthTab(mode) {
+  if (el.authError) el.authError.style.display = 'none';
+  const descEl = document.getElementById('auth-sub-desc');
+  if (mode === 'signup') {
+    if (el.tabAuthLogin) el.tabAuthLogin.classList.remove('active');
+    if (el.tabAuthSignup) el.tabAuthSignup.classList.add('active');
+    if (el.authForm) el.authForm.style.display = 'none';
+    if (el.signupForm) {
+      el.signupForm.style.display = 'flex';
+      setTimeout(() => el.signupName && el.signupName.focus(), 50);
+    }
+    if (descEl) descEl.textContent = 'Create your personal account to sync your expenses in real-time across all your devices.';
+  } else {
+    if (el.tabAuthSignup) el.tabAuthSignup.classList.remove('active');
+    if (el.tabAuthLogin) el.tabAuthLogin.classList.add('active');
+    if (el.signupForm) el.signupForm.style.display = 'none';
+    if (el.authForm) {
+      el.authForm.style.display = 'flex';
+      setTimeout(() => el.authUsername && el.authUsername.focus(), 50);
+    }
+    if (descEl) descEl.textContent = 'Sign in or create an account to access your personal expenses from any phone or computer.';
+  }
+}
+
+let isSignupPasswordVisible = false;
+function toggleSignupPasswordVisibility() {
+  isSignupPasswordVisible = !isSignupPasswordVisible;
+  if (el.signupPassword) {
+    el.signupPassword.type = isSignupPasswordVisible ? 'text' : 'password';
+  }
+  if (el.pwdIconEyeSignup) {
+    el.pwdIconEyeSignup.innerHTML = isSignupPasswordVisible
+      ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'
+      : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+  }
+}
+
+async function handleFirebaseUserSignedIn(user) {
+  const uid = user.uid;
+  const email = (user.email || '').toLowerCase();
+  const displayName = user.displayName || (email.split('@')[0]) || 'User';
+  const role = (email === 'srujanibishoi@gmail.com' || email.startsWith('srujani')) ? 'admin' : 'member';
+
+  currentSession = {
+    uid: uid,
+    username: email.split('@')[0],
+    email: email,
+    name: displayName,
+    role: role,
+    loginTime: new Date().toISOString()
+  };
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(currentSession));
+
+  let loaded = false;
+  setCloudSyncStatus('syncing', 'Loading...');
+
+  if (fbDb) {
+    try {
+      const snap = await fbDb.collection('users').doc(uid).get();
+      if (snap.exists) {
+        const cloudData = snap.data();
+        appState = {
+          currency: cloudData.currency || 'INR',
+          theme: cloudData.theme || 'dark',
+          exchangeRates: Object.assign({}, FALLBACK_RATES_FROM_INR, cloudData.exchangeRates || {}),
+          paymentMethods: cloudData.paymentMethods || DEFAULT_PAYMENT_METHODS,
+          expenses: cloudData.expenses || [],
+          creditCardPayments: cloudData.creditCardPayments || [],
+          dailyJournals: cloudData.dailyJournals || {},
+          years: Array.from(new Set([2026, ...(cloudData.years || [])])).sort((a,b) => a-b)
+        };
+        loaded = true;
+        setCloudSyncStatus('ready', 'Cloud');
+      } else {
+        // Initializing new cloud account document
+        let initialData = null;
+        try {
+          const rawLocal = localStorage.getItem(`expense_app_data_v1_${currentSession.username}`) || localStorage.getItem('expense_app_data_v1_srujani');
+          if (rawLocal) initialData = JSON.parse(rawLocal);
+        } catch (e) {}
+
+        appState = initialData || getSampleSeedData();
+        await fbDb.collection('users').doc(uid).set({
+          profile: {
+            uid: uid,
+            email: email,
+            displayName: displayName,
+            role: role,
+            createdAt: new Date().toISOString()
+          },
+          expenses: appState.expenses || [],
+          paymentMethods: appState.paymentMethods || [],
+          creditCardPayments: appState.creditCardPayments || [],
+          dailyJournals: appState.dailyJournals || {},
+          currency: appState.currency || 'INR',
+          theme: appState.theme || 'dark',
+          exchangeRates: appState.exchangeRates || FALLBACK_RATES_FROM_INR,
+          years: appState.years || [2026],
+          lastUpdated: new Date().toISOString()
+        });
+        loaded = true;
+        setCloudSyncStatus('ready', 'Cloud');
+      }
+    } catch (err) {
+      console.warn('Firestore load notice:', err);
+      setCloudSyncStatus('offline', 'Offline');
+    }
+  }
+
+  if (!loaded) {
+    appState = loadState(currentSession.username);
+  }
+
+  const key = getUserStorageKey(currentSession.username);
+  localStorage.setItem(key, JSON.stringify(appState));
+
+  if (appState.theme) {
+    applyTheme(appState.theme);
+  }
+
+  hideAuthOverlay();
+  updateUserNavUi();
+  populatePaymentMethodSelect();
+  renderAll();
+  showToast(`Welcome, ${currentSession.name}! Connected to Cloud ☁️`);
+}
+
 function updateUserNavUi() {
   if (!currentSession) {
     if (el.btnUserProfile) el.btnUserProfile.style.display = 'none';
@@ -3018,7 +3375,8 @@ function updateUserNavUi() {
     el.userMenuRole.className = `role-badge ${currentSession.role === 'admin' ? 'role-admin' : 'role-member'}`;
   }
   if (el.userMenuSub) {
-    el.userMenuSub.innerHTML = `@${escapeHtml(currentSession.username)} • <span class="role-badge ${currentSession.role === 'admin' ? 'role-admin' : 'role-member'}">${currentSession.role === 'admin' ? 'Admin' : 'Member'}</span>`;
+    const handle = currentSession.email ? currentSession.email : `@${escapeHtml(currentSession.username)}`;
+    el.userMenuSub.innerHTML = `${escapeHtml(handle)} • <span class="role-badge ${currentSession.role === 'admin' ? 'role-admin' : 'role-member'}">${currentSession.role === 'admin' ? 'Admin' : 'Member'}</span>`;
   }
   if (el.btnOpenUserMgmt) {
     el.btnOpenUserMgmt.style.display = currentSession.role === 'admin' ? 'flex' : 'none';
@@ -3029,6 +3387,7 @@ function showAuthOverlay() {
   if (el.authOverlay) {
     el.authOverlay.classList.remove('auth-hidden');
     if (el.authError) el.authError.style.display = 'none';
+    switchAuthTab('login');
     if (el.authUsername) {
       el.authUsername.value = '';
       setTimeout(() => el.authUsername.focus(), 50);
@@ -3150,40 +3509,50 @@ function renderUsersList() {
 // App Initialization
 // -----------------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
-  // Check active session
-  currentSession = getActiveSession();
-  if (!currentSession) {
-    showAuthOverlay();
-    appState = loadState('srujani');
-  } else {
-    hideAuthOverlay();
-    appState = loadState(currentSession.username);
-  }
-  updateUserNavUi();
-
-  // Apply saved theme
-  if (appState.theme) {
-    applyTheme(appState.theme);
-  }
-
   // Setup initial timeline & selected date
   const now = new Date();
-  if (now.getFullYear() >= 2026 && appState.years.includes(now.getFullYear())) {
-    selectedYear = now.getFullYear();
-    selectedMonth = now.getMonth();
-    const mStr = String(selectedMonth + 1).padStart(2, '0');
-    const dStr = String(now.getDate()).padStart(2, '0');
-    selectedJournalDate = `${selectedYear}-${mStr}-${dStr}`;
-  } else {
-    selectedYear = 2026;
-    selectedMonth = 0; // January 2026 default
-    selectedJournalDate = '2026-01-02';
-  }
+  selectedYear = 2026;
+  selectedMonth = 0; // January 2026 default
+  selectedJournalDate = '2026-01-02';
 
   initTimeline();
   initEventListeners();
   populatePaymentMethodSelect();
-  renderAll();
+
+  // Listen to Firebase Auth state
+  if (fbAuth) {
+    fbAuth.onAuthStateChanged((user) => {
+      if (user) {
+        handleFirebaseUserSignedIn(user);
+      } else {
+        currentSession = getActiveSession();
+        if (!currentSession) {
+          showAuthOverlay();
+          appState = loadState('srujani');
+          setCloudSyncStatus('offline', 'Sign In');
+        } else {
+          hideAuthOverlay();
+          appState = loadState(currentSession.username);
+          setCloudSyncStatus('offline', 'Local');
+        }
+        updateUserNavUi();
+        if (appState.theme) applyTheme(appState.theme);
+        renderAll();
+      }
+    });
+  } else {
+    currentSession = getActiveSession();
+    if (!currentSession) {
+      showAuthOverlay();
+      appState = loadState('srujani');
+    } else {
+      hideAuthOverlay();
+      appState = loadState(currentSession.username);
+    }
+    updateUserNavUi();
+    if (appState.theme) applyTheme(appState.theme);
+    renderAll();
+  }
 
   // Fetch live exchange rates in background
   fetchLiveExchangeRates();
