@@ -119,9 +119,13 @@
               <input type="file" id="input-import-json" accept=".json" style="display: none;">
             </label>
             <div class="dropdown-divider"></div>
+            <button id="btn-clear-month-menu" class="dropdown-item text-danger">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <span id="label-clear-month">Clear Current Month's Expenses</span>
+            </button>
             <button id="btn-clear-expenses" class="dropdown-item text-danger">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-              Clear All Expenses
+              Clear All Expenses (All Months)
             </button>
             <button id="btn-reset-demo" class="dropdown-item text-danger">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -248,6 +252,10 @@
                   <span class="badge badge-neutral" id="badge-entry-count">0 items</span>
                 </div>
                 <div class="panel-actions">
+                  <button id="btn-clear-month-expenses" class="btn btn-secondary btn-sm text-danger" title="Clear all expenses for current month">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <span>Clear Month</span>
+                  </button>
                   <button id="btn-add-expense" class="btn btn-primary">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     <span>Add Expense</span>
