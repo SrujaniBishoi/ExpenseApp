@@ -672,12 +672,14 @@ async function fetchLiveExchangeRates() {
 }
 
 function updateFxChip() {
-  const cur = appState.currency || 'INR';
+  if (!el.fxRateText || !el.liveFxChip) return;
+  const cur = (appState && appState.currency) ? appState.currency : 'INR';
   if (cur === 'INR') {
     el.fxRateText.textContent = 'Base: INR (₹)';
     el.liveFxChip.title = 'Displaying in base currency: Indian Rupee (INR)';
   } else {
-    const rateFromInr = appState.exchangeRates[cur] || FALLBACK_RATES_FROM_INR[cur] || 1;
+    const rates = (appState && appState.exchangeRates) ? appState.exchangeRates : FALLBACK_RATES_FROM_INR;
+    const rateFromInr = rates[cur] || FALLBACK_RATES_FROM_INR[cur] || 1;
     const inrPerUnit = (1 / rateFromInr).toFixed(2);
     el.fxRateText.textContent = `1 ${cur} = ₹${inrPerUnit}`;
     el.liveFxChip.title = `Live Forex Conversion: 1 ${cur} = ₹${inrPerUnit} INR`;
@@ -685,31 +687,34 @@ function updateFxChip() {
 }
 
 // Convert amount in base INR to the selected display currency
-function convertFromInr(amountInInr, targetCurrency = appState.currency) {
-  if (!targetCurrency || targetCurrency === 'INR') return Number(amountInInr || 0);
-  const rate = appState.exchangeRates[targetCurrency] || FALLBACK_RATES_FROM_INR[targetCurrency] || 1;
+function convertFromInr(amountInInr, targetCurrency = (appState ? appState.currency : 'INR')) {
+  const cur = targetCurrency || (appState ? appState.currency : 'INR') || 'INR';
+  if (cur === 'INR') return Number(amountInInr || 0);
+  const rates = (appState && appState.exchangeRates) ? appState.exchangeRates : FALLBACK_RATES_FROM_INR;
+  const rate = rates[cur] || FALLBACK_RATES_FROM_INR[cur] || 1;
   return Number(amountInInr || 0) * rate;
 }
 
 // Convert amount in foreign currency back to base INR
 function convertToInr(foreignAmount, sourceCurrency) {
   if (!sourceCurrency || sourceCurrency === 'INR') return Number(foreignAmount || 0);
-  const rate = appState.exchangeRates[sourceCurrency] || FALLBACK_RATES_FROM_INR[sourceCurrency] || 1;
+  const rates = (appState && appState.exchangeRates) ? appState.exchangeRates : FALLBACK_RATES_FROM_INR;
+  const rate = rates[sourceCurrency] || FALLBACK_RATES_FROM_INR[sourceCurrency] || 1;
   return Number(foreignAmount || 0) / rate;
 }
 
 // Format currency for display
-function formatCurrency(amountInInr, targetCurrency = appState.currency) {
-  const cur = targetCurrency || 'INR';
+function formatCurrency(amountInInr, targetCurrency = (appState ? appState.currency : 'INR')) {
+  const cur = targetCurrency || (appState ? appState.currency : 'INR') || 'INR';
   const sym = CURRENCY_SYMBOLS[cur] || `${cur} `;
   const converted = convertFromInr(amountInInr, cur);
 
   // Use Indian locale formatting if INR
   if (cur === 'INR') {
-    return `${sym}${Number(converted).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `${sym}${Number(converted || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }
 
-  return `${sym}${Number(converted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${sym}${Number(converted || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 // Show Toast message
