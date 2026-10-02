@@ -2914,30 +2914,35 @@ function initEventListeners() {
     if (el.userProfileMenuContent) el.userProfileMenuContent.classList.remove('show');
   });
 
+  // Centralized robust sign-out
+  async function performSignOut() {
+    if (el.userProfileMenuContent) el.userProfileMenuContent.classList.remove('show');
+    clearActiveSession();
+    updateUserNavUi();
+    showAuthOverlay();
+    if (fbAuth) {
+      try {
+        await fbAuth.signOut();
+      } catch (e) {
+        console.warn('Firebase signOut notice:', e);
+      }
+    }
+    showToast('You have signed out.');
+  }
+
   // Switch User
   if (el.btnSwitchUser) {
-    el.btnSwitchUser.addEventListener('click', async () => {
-      if (el.userProfileMenuContent) el.userProfileMenuContent.classList.remove('show');
-      if (fbAuth) {
-        try { await fbAuth.signOut(); } catch(e) {}
-      }
-      clearActiveSession();
-      updateUserNavUi();
-      showAuthOverlay();
+    el.btnSwitchUser.addEventListener('click', (e) => {
+      e.stopPropagation();
+      performSignOut();
     });
   }
 
   // Logout
   if (el.btnLogout) {
-    el.btnLogout.addEventListener('click', async () => {
-      if (el.userProfileMenuContent) el.userProfileMenuContent.classList.remove('show');
-      if (fbAuth) {
-        try { await fbAuth.signOut(); } catch(e) {}
-      }
-      clearActiveSession();
-      updateUserNavUi();
-      showAuthOverlay();
-      showToast('You have signed out.');
+    el.btnLogout.addEventListener('click', (e) => {
+      e.stopPropagation();
+      performSignOut();
     });
   }
 
@@ -3525,33 +3530,38 @@ document.addEventListener('DOMContentLoaded', () => {
       if (user) {
         handleFirebaseUserSignedIn(user);
       } else {
-        currentSession = getActiveSession();
-        if (!currentSession) {
-          showAuthOverlay();
-          appState = loadState('srujani');
-          setCloudSyncStatus('offline', 'Sign In');
-        } else {
+        // Firebase is not signed in
+        const sess = getActiveSession();
+        if (sess && !sess.uid) {
+          // Explicit local session (e.g. srujani local demo)
+          currentSession = sess;
           hideAuthOverlay();
           appState = loadState(currentSession.username);
           setCloudSyncStatus('offline', 'Local');
+          updateUserNavUi();
+          if (appState.theme) applyTheme(appState.theme);
+          renderAll();
+        } else {
+          // Logged out
+          clearActiveSession();
+          showAuthOverlay();
+          updateUserNavUi();
+          setCloudSyncStatus('offline', 'Sign In');
         }
-        updateUserNavUi();
-        if (appState.theme) applyTheme(appState.theme);
-        renderAll();
       }
     });
   } else {
     currentSession = getActiveSession();
     if (!currentSession) {
       showAuthOverlay();
-      appState = loadState('srujani');
+      updateUserNavUi();
     } else {
       hideAuthOverlay();
       appState = loadState(currentSession.username);
+      updateUserNavUi();
+      if (appState.theme) applyTheme(appState.theme);
+      renderAll();
     }
-    updateUserNavUi();
-    if (appState.theme) applyTheme(appState.theme);
-    renderAll();
   }
 
   // Fetch live exchange rates in background
