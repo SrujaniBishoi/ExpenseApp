@@ -464,6 +464,7 @@ function saveStateToStorage(state = appState) {
 
 // DOM Elements
 const el = {
+  brandHomeLink: document.getElementById('brand-home-link'),
   themeToggle: document.getElementById('theme-toggle'),
   currencySelect: document.getElementById('currency-select'),
   liveFxChip: document.getElementById('live-fx-chip'),
@@ -678,9 +679,11 @@ function updateFxChip() {
   if (!el.fxRateText || !el.liveFxChip) return;
   const cur = (appState && appState.currency) ? appState.currency : 'INR';
   if (cur === 'INR') {
-    el.fxRateText.textContent = 'Base: INR (₹)';
-    el.liveFxChip.title = 'Displaying in base currency: Indian Rupee (INR)';
+    el.liveFxChip.style.display = 'none';
+    el.fxRateText.textContent = '';
+    el.liveFxChip.title = '';
   } else {
+    el.liveFxChip.style.display = 'inline-flex';
     const rates = (appState && appState.exchangeRates) ? appState.exchangeRates : FALLBACK_RATES_FROM_INR;
     const rateFromInr = rates[cur] || FALLBACK_RATES_FROM_INR[cur] || 1;
     const inrPerUnit = (1 / rateFromInr).toFixed(2);
@@ -2773,6 +2776,26 @@ function renderAll() {
 // Event Listeners Setup
 // -----------------------------------------------------------------------------
 function initEventListeners() {
+  // Brand Home Link - Return to Homepage
+  if (el.brandHomeLink) {
+    el.brandHomeLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeSideMenu();
+      if (el.expenseSearch) el.expenseSearch.value = '';
+      if (el.filterCategory) el.filterCategory.value = '';
+      if (el.filterPayment) el.filterPayment.value = '';
+      if (el.sortOrder) el.sortOrder.value = 'date-desc';
+      selectedYear = 2026;
+      selectedMonth = 0;
+      selectedJournalDate = '2026-01-02';
+      if (el.yearSelect) el.yearSelect.value = 2026;
+      switchView('monthly-view');
+      renderAll();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast('Navigated to Homepage');
+    });
+  }
+
   // Theme Toggle
   el.themeToggle.addEventListener('click', () => {
     const curTheme = document.body.getAttribute('data-theme') || 'dark';
