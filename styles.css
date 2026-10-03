@@ -294,7 +294,7 @@ body {
 }
 
 /* -----------------------------------------------------------------------------
-   Timeline Bar (Year & Month Selectors)
+   Timeline Bar (Year & Month Selectors Vertically Arranged on Right Side)
    ----------------------------------------------------------------------------- */
 .timeline-bar {
   background-color: var(--bg-surface-glass);
@@ -302,26 +302,37 @@ body {
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border-color);
   padding: 0.65rem 1.75rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
 }
 
-.timeline-selectors-row {
+.timeline-selectors-right {
   display: flex;
+  justify-content: flex-end;
   align-items: center;
-  gap: 1rem;
-  width: 100%;
-  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+.timeline-vertical-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
 }
 
 .year-controls,
 .month-controls {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
   background-color: var(--bg-surface-elevated);
   padding: 4px 10px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
+  min-width: 250px;
 }
 
 .control-label {
@@ -331,6 +342,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-left: 2px;
+  min-width: 48px;
 }
 
 .year-selector-wrap,
@@ -342,8 +354,8 @@ body {
 
 /* Prominent, clean "<" and ">" Buttons */
 .btn-year-nav {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
   background: var(--bg-surface);
@@ -353,7 +365,7 @@ body {
   justify-content: center;
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 800;
   transition: all var(--transition-fast);
   user-select: none;
@@ -379,9 +391,9 @@ body {
   color: var(--text-main);
   border: none;
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  padding: 4px 8px;
+  padding: 3px 6px;
   cursor: pointer;
   outline: none;
 }
@@ -391,55 +403,6 @@ body {
   background-color: var(--bg-surface);
   color: var(--text-main);
   padding: 6px 10px;
-}
-
-.btn-ghost-sm {
-  background: transparent;
-  border: none;
-  color: var(--primary);
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  transition: var(--transition-fast);
-}
-
-.btn-ghost-sm:hover {
-  background: var(--primary-soft);
-}
-
-.timeline-quick-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  margin-left: auto;
-}
-
-.timeline-month-spend {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 5px 12px;
-  background: var(--bg-surface-elevated);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  font-size: 0.85rem;
-  box-shadow: var(--shadow-sm);
-}
-
-.timeline-spend-label {
-  color: var(--text-muted);
-  font-weight: 600;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.timeline-spend-val {
-  color: var(--primary);
-  font-weight: 800;
-  font-family: var(--font-mono);
 }
 
 /* -----------------------------------------------------------------------------
@@ -2673,35 +2636,28 @@ input[type="radio"],
   /* Responsive mobile timeline selectors */
   .timeline-bar {
     padding: 0.65rem 0.85rem;
+    justify-content: stretch;
   }
 
-  .timeline-selectors-row {
-    flex-direction: column;
+  .timeline-selectors-right {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .timeline-vertical-stack {
+    width: 100%;
     align-items: stretch;
-    gap: 0.65rem;
   }
 
   .year-controls,
   .month-controls {
     width: 100%;
+    min-width: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 6px 12px;
     box-shadow: var(--shadow-sm);
-  }
-
-  .timeline-quick-actions {
-    width: 100%;
-    margin-left: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .timeline-month-spend {
-    flex: 1;
-    justify-content: center;
   }
 
   /* Prevent browser viewport auto-zoom when tapping inputs on iOS/Android */
@@ -2762,11 +2718,7 @@ input[type="radio"],
     padding: 4px 8px;
   }
 
-  .timeline-quick-actions {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
-  }
+
 
   .metrics-grid {
     grid-template-columns: 1fr;
