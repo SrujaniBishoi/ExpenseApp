@@ -375,10 +375,11 @@ const el = {
   btnPrevYear: document.getElementById('btn-prev-year'),
   btnNextYear: document.getElementById('btn-next-year'),
   btnAddFutureYear: document.getElementById('btn-add-future-year'),
-  monthPillScroll: document.getElementById('month-pill-scroll'),
-  monthPills: document.getElementById('month-pills'),
-  btnPrevMonthScroll: document.getElementById('btn-prev-month-scroll'),
-  btnNextMonthScroll: document.getElementById('btn-next-month-scroll'),
+  monthSelect: document.getElementById('month-select'),
+  btnPrevMonth: document.getElementById('btn-prev-month'),
+  btnNextMonth: document.getElementById('btn-next-month'),
+  btnJumpCurrentMonth: document.getElementById('btn-jump-current-month'),
+  timelineMonthSpendVal: document.getElementById('timeline-month-spend-val'),
 
   // Metrics (Clean 2-Card Layout)
   statTotalSpend: document.getElementById('stat-total-spend'),
@@ -668,55 +669,42 @@ function renderYearOptions() {
 }
 
 function renderMonthPills() {
-  el.monthPills.innerHTML = '';
-
-  MONTH_NAMES.forEach((name, idx) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = `month-pill ${idx === selectedMonth ? 'active' : ''}`;
-    btn.setAttribute('role', 'tab');
-    btn.setAttribute('aria-selected', idx === selectedMonth ? 'true' : 'false');
-    btn.dataset.month = idx;
-
-    // Calculate month total in INR
-    const monthExpenses = getExpensesForMonth(selectedYear, idx);
-    const monthTotalInInr = monthExpenses.reduce((sum, item) => sum + Number(item.amount), 0);
-
-    const labelSpan = document.createElement('span');
-    labelSpan.textContent = MONTH_SHORT[idx];
-
-    const badgeSpan = document.createElement('span');
-    badgeSpan.className = 'pill-badge';
-    badgeSpan.textContent = monthTotalInInr > 0 ? formatCurrency(monthTotalInInr) : '—';
-
-    btn.appendChild(labelSpan);
-    btn.appendChild(badgeSpan);
-
-    btn.addEventListener('click', () => {
-      selectedMonth = idx;
-      // Sync journal date to 1st of selected month if currently outside it
-      const [jYear, jMonth] = selectedJournalDate.split('-').map(Number);
-      if (jYear !== selectedYear || (jMonth - 1) !== selectedMonth) {
-        const mStr = String(selectedMonth + 1).padStart(2, '0');
-        selectedJournalDate = `${selectedYear}-${mStr}-01`;
-      }
-      renderAll();
+  if (el.monthSelect) {
+    el.monthSelect.innerHTML = '';
+    MONTH_NAMES.forEach((name, idx) => {
+      const opt = document.createElement('option');
+      opt.value = idx;
+      const monthExpenses = getExpensesForMonth(selectedYear, idx);
+      const monthTotalInInr = monthExpenses.reduce((sum, item) => sum + Number(item.amount), 0);
+      opt.textContent = `${name}${monthTotalInInr > 0 ? ` (${formatCurrency(monthTotalInInr)})` : ''}`;
+      if (idx === selectedMonth) opt.selected = true;
+      el.monthSelect.appendChild(opt);
     });
+    el.monthSelect.value = selectedMonth;
+  }
 
-    el.monthPills.appendChild(btn);
-  });
-
-  scrollActiveMonthIntoView();
+  // Update total monthly spend badge next to month selector
+  if (el.timelineMonthSpendVal) {
+    const curMonthExpenses = getExpensesForMonth(selectedYear, selectedMonth);
+    const curMonthTotal = curMonthExpenses.reduce((sum, item) => sum + Number(item.amount), 0);
+    el.timelineMonthSpendVal.textContent = formatCurrency(curMonthTotal);
+  }
 }
 
-function scrollActiveMonthIntoView() {
-  setTimeout(() => {
-    if (!el.monthPills) return;
-    const activePill = el.monthPills.querySelector('.month-pill.active');
-    if (activePill) {
-      activePill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
-  }, 50);
+function setToCurrentMonth() {
+  const now = new Date();
+  selectedYear = now.getFullYear();
+  selectedMonth = now.getMonth();
+  if (appState && appState.years && !appState.years.includes(selectedYear)) {
+    appState.years = Array.from(new Set([2026, ...appState.years, selectedYear])).sort((a,b) => a-b);
+    saveStateToStorage();
+    renderYearOptions();
+  }
+  const mStr = String(selectedMonth + 1).padStart(2, '0');
+  const dStr = String(now.getDate()).padStart(2, '0');
+  selectedJournalDate = `${selectedYear}-${mStr}-${dStr}`;
+  if (el.yearSelect) el.yearSelect.value = selectedYear;
+  if (el.monthSelect) el.monthSelect.value = selectedMonth;
 }
 
 function addFutureYear() {
@@ -2694,14 +2682,11 @@ function initEventListeners() {
       if (el.filterCategory) el.filterCategory.value = '';
       if (el.filterPayment) el.filterPayment.value = '';
       if (el.sortOrder) el.sortOrder.value = 'date-desc';
-      selectedYear = 2026;
-      selectedMonth = 0;
-      selectedJournalDate = '2026-01-02';
-      if (el.yearSelect) el.yearSelect.value = 2026;
+      setToCurrentMonth();
       switchView('monthly-view');
       renderAll();
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      showToast('Navigated to Homepage');
+      showToast(`Navigated to ${MONTH_NAMES[selectedMonth]} ${selectedYear}`);
     });
   }
 
@@ -2766,25 +2751,68 @@ function initEventListeners() {
     el.btnAddFutureYear.addEventListener('click', addFutureYear);
   }
 
-  // Quick Month Stepper Arrows for Timeline Bar
-  if (el.btnPrevMonthScroll) {
-    el.btnPrevMonthScroll.addEventListener('click', () => {
-      selectedMonth = (selectedMonth - 1 + 12) % 12;
+  // Month Dropdown & Navigation Controls
+  if (el.monthSelect) {
+    el.monthSelect.addEventListener('change', () => {
+      selectedMonth = parseInt(el.monthSelect.value, 10);
       const mStr = String(selectedMonth + 1).padStart(2, '0');
       selectedJournalDate = `${selectedYear}-${mStr}-01`;
       renderAll();
-      scrollActiveMonthIntoView();
       showToast(`${MONTH_NAMES[selectedMonth]} ${selectedYear}`);
     });
   }
-  if (el.btnNextMonthScroll) {
-    el.btnNextMonthScroll.addEventListener('click', () => {
-      selectedMonth = (selectedMonth + 1) % 12;
+
+  if (el.btnPrevMonth) {
+    el.btnPrevMonth.addEventListener('click', () => {
+      if (selectedMonth > 0) {
+        selectedMonth--;
+      } else {
+        const idx = appState.years.indexOf(selectedYear);
+        if (idx > 0) {
+          selectedYear = appState.years[idx - 1];
+          selectedMonth = 11;
+          if (el.yearSelect) el.yearSelect.value = selectedYear;
+        } else {
+          showToast('January 2026 is the starting timeline.');
+          return;
+        }
+      }
       const mStr = String(selectedMonth + 1).padStart(2, '0');
       selectedJournalDate = `${selectedYear}-${mStr}-01`;
       renderAll();
-      scrollActiveMonthIntoView();
       showToast(`${MONTH_NAMES[selectedMonth]} ${selectedYear}`);
+    });
+  }
+
+  if (el.btnNextMonth) {
+    el.btnNextMonth.addEventListener('click', () => {
+      if (selectedMonth < 11) {
+        selectedMonth++;
+      } else {
+        const maxYear = Math.max(...appState.years);
+        if (selectedYear >= maxYear) {
+          appState.years.push(selectedYear + 1);
+          appState.years.sort((a, b) => a - b);
+          saveStateToStorage();
+          renderYearOptions();
+        }
+        selectedYear++;
+        selectedMonth = 0;
+        if (el.yearSelect) el.yearSelect.value = selectedYear;
+      }
+      const mStr = String(selectedMonth + 1).padStart(2, '0');
+      selectedJournalDate = `${selectedYear}-${mStr}-01`;
+      renderAll();
+      showToast(`${MONTH_NAMES[selectedMonth]} ${selectedYear}`);
+    });
+  }
+
+  if (el.btnJumpCurrentMonth) {
+    el.btnJumpCurrentMonth.addEventListener('click', () => {
+      setToCurrentMonth();
+      switchView('monthly-view');
+      renderAll();
+      showToast(`Jumped to ${MONTH_NAMES[selectedMonth]} ${selectedYear}`);
     });
   }
 
@@ -3460,6 +3488,7 @@ async function handleFirebaseUserSignedIn(user) {
   hideAuthOverlay();
   updateUserNavUi();
   populatePaymentMethodSelect();
+  setToCurrentMonth();
   renderAll();
   showToast(`Welcome, ${currentSession.name}! Connected to Cloud ☁️`);
 }
@@ -3618,10 +3647,8 @@ document.addEventListener('DOMContentLoaded', () => {
   currentSession = getActiveSession();
   appState = loadState(currentSession ? currentSession.username : 'srujani');
 
-  // 2. Setup initial timeline & selected date
-  selectedYear = 2026;
-  selectedMonth = 0; // January 2026 default
-  selectedJournalDate = '2026-01-02';
+  // 2. Setup initial timeline & selected date to current real-world month
+  setToCurrentMonth();
 
   // 3. Initialize all DOM components and listeners safely
   initTimeline();
@@ -3659,6 +3686,7 @@ document.addEventListener('DOMContentLoaded', () => {
           setCloudSyncStatus('offline', 'Local');
           updateUserNavUi();
           if (appState.theme) applyTheme(appState.theme);
+          setToCurrentMonth();
           renderAll();
         } else {
           // Logged out
