@@ -93,10 +93,50 @@ const CATEGORY_COLORS = {
   'Other': '#64748b'
 };
 
+// Calculate dynamic timeline years:
+// Starts at 2026.
+// Defaults to a max of 2030.
+// Automatically expands in 5-year intervals when the actual calendar date reaches 01/01 of the milestone year.
+// E.g. when actual date becomes 01/01/2030, expands to 2035; on 01/01/2035, expands to 2040, and so on.
+function getDynamicTimelineYears() {
+  const START_YEAR = 2026;
+  const now = new Date();
+  
+  let maxYear = 2030;
+  while (now >= new Date(maxYear, 0, 1)) {
+    maxYear += 5;
+  }
+  
+  const years = [];
+  for (let y = START_YEAR; y <= maxYear; y++) {
+    years.push(y);
+  }
+  
+  // Also preserve years from saved expenses or state if any
+  if (typeof appState !== 'undefined' && appState) {
+    if (Array.isArray(appState.expenses)) {
+      appState.expenses.forEach(exp => {
+        const ey = parseInt(exp.year, 10);
+        if (ey && !years.includes(ey)) {
+          years.push(ey);
+        }
+      });
+    }
+    if (Array.isArray(appState.years)) {
+      appState.years.forEach(y => {
+        if (y && !years.includes(y)) years.push(y);
+      });
+    }
+  }
+  
+  years.sort((a, b) => a - b);
+  return years;
+}
+
 // Clean initial state in INR starting from January 2026 (No sample data, clean slate for all users)
 function getSampleSeedData() {
   return {
-    years: [2026, 2027, 2028],
+    years: getDynamicTimelineYears(),
     currency: 'INR',
     theme: 'dark',
     exchangeRates: { ...FALLBACK_RATES_FROM_INR },
@@ -374,12 +414,9 @@ const el = {
   yearSelect: document.getElementById('year-select'),
   btnPrevYear: document.getElementById('btn-prev-year'),
   btnNextYear: document.getElementById('btn-next-year'),
-  btnAddFutureYear: document.getElementById('btn-add-future-year'),
   monthSelect: document.getElementById('month-select'),
   btnPrevMonth: document.getElementById('btn-prev-month'),
   btnNextMonth: document.getElementById('btn-next-month'),
-  btnJumpCurrentMonth: document.getElementById('btn-jump-current-month'),
-  timelineMonthSpendVal: document.getElementById('timeline-month-spend-val'),
 
   // Metrics (Clean 2-Card Layout)
   statTotalSpend: document.getElementById('stat-total-spend'),
@@ -649,12 +686,8 @@ function initTimeline() {
 function renderYearOptions() {
   if (!el.yearSelect) return;
   if (!appState) appState = getSampleSeedData();
-  if (!appState.years || !Array.isArray(appState.years)) appState.years = [2026];
+  appState.years = getDynamicTimelineYears();
   el.yearSelect.innerHTML = '';
-  if (!appState.years.includes(2026)) {
-    appState.years.push(2026);
-  }
-  appState.years.sort((a,b) => a-b);
 
   appState.years.forEach(yr => {
     const opt = document.createElement('option');
@@ -664,8 +697,8 @@ function renderYearOptions() {
     el.yearSelect.appendChild(opt);
   });
 
-  el.annualTabYear.textContent = selectedYear;
-  el.annualHeaderYear.textContent = selectedYear;
+  if (el.annualTabYear) el.annualTabYear.textContent = selectedYear;
+  if (el.annualHeaderYear) el.annualHeaderYear.textContent = selectedYear;
 }
 
 function renderMonthPills() {
@@ -682,21 +715,16 @@ function renderMonthPills() {
     });
     el.monthSelect.value = selectedMonth;
   }
-
-  // Update total monthly spend badge next to month selector
-  if (el.timelineMonthSpendVal) {
-    const curMonthExpenses = getExpensesForMonth(selectedYear, selectedMonth);
-    const curMonthTotal = curMonthExpenses.reduce((sum, item) => sum + Number(item.amount), 0);
-    el.timelineMonthSpendVal.textContent = formatCurrency(curMonthTotal);
-  }
 }
 
 function setToCurrentMonth() {
   const now = new Date();
+  appState.years = getDynamicTimelineYears();
   selectedYear = now.getFullYear();
   selectedMonth = now.getMonth();
-  if (appState && appState.years && !appState.years.includes(selectedYear)) {
-    appState.years = Array.from(new Set([2026, ...appState.years, selectedYear])).sort((a,b) => a-b);
+  if (!appState.years.includes(selectedYear)) {
+    appState.years.push(selectedYear);
+    appState.years.sort((a,b) => a-b);
     saveStateToStorage();
     renderYearOptions();
   }
@@ -705,17 +733,6 @@ function setToCurrentMonth() {
   selectedJournalDate = `${selectedYear}-${mStr}-${dStr}`;
   if (el.yearSelect) el.yearSelect.value = selectedYear;
   if (el.monthSelect) el.monthSelect.value = selectedMonth;
-}
-
-function addFutureYear() {
-  const maxYear = Math.max(...appState.years);
-  const nextYear = maxYear + 1;
-  appState.years.push(nextYear);
-  saveStateToStorage();
-  selectedYear = nextYear;
-  renderYearOptions();
-  renderAll();
-  showToast(`Added year ${nextYear} to timeline!`);
 }
 
 // -----------------------------------------------------------------------------
@@ -2743,13 +2760,10 @@ function initEventListeners() {
       renderAll();
       showToast(`Year: ${selectedYear}`);
     } else {
-      addFutureYear();
+      const maxYear = appState.years[appState.years.length - 1];
+      showToast(`Timeline maximum is ${maxYear} (auto-expands to ${maxYear + 5} on 01/01/${maxYear}).`);
     }
   });
-
-  if (el.btnAddFutureYear) {
-    el.btnAddFutureYear.addEventListener('click', addFutureYear);
-  }
 
   // Month Dropdown & Navigation Controls
   if (el.monthSelect) {
@@ -2789,30 +2803,20 @@ function initEventListeners() {
       if (selectedMonth < 11) {
         selectedMonth++;
       } else {
-        const maxYear = Math.max(...appState.years);
-        if (selectedYear >= maxYear) {
-          appState.years.push(selectedYear + 1);
-          appState.years.sort((a, b) => a - b);
-          saveStateToStorage();
-          renderYearOptions();
+        const idx = appState.years.indexOf(selectedYear);
+        if (idx < appState.years.length - 1) {
+          selectedYear = appState.years[idx + 1];
+          selectedMonth = 0;
+          if (el.yearSelect) el.yearSelect.value = selectedYear;
+        } else {
+          showToast(`Reached December ${selectedYear}. Timeline ends at ${selectedYear}.`);
+          return;
         }
-        selectedYear++;
-        selectedMonth = 0;
-        if (el.yearSelect) el.yearSelect.value = selectedYear;
       }
       const mStr = String(selectedMonth + 1).padStart(2, '0');
       selectedJournalDate = `${selectedYear}-${mStr}-01`;
       renderAll();
       showToast(`${MONTH_NAMES[selectedMonth]} ${selectedYear}`);
-    });
-  }
-
-  if (el.btnJumpCurrentMonth) {
-    el.btnJumpCurrentMonth.addEventListener('click', () => {
-      setToCurrentMonth();
-      switchView('monthly-view');
-      renderAll();
-      showToast(`Jumped to ${MONTH_NAMES[selectedMonth]} ${selectedYear}`);
     });
   }
 
@@ -2841,13 +2845,15 @@ function initEventListeners() {
       if (selectedMonth < 11) {
         selectedMonth++;
       } else {
-        const maxYear = Math.max(...appState.years);
-        if (selectedYear >= maxYear) {
-          appState.years.push(selectedYear + 1);
-          saveStateToStorage();
+        const idx = appState.years.indexOf(selectedYear);
+        if (idx < appState.years.length - 1) {
+          selectedYear = appState.years[idx + 1];
+          selectedMonth = 0;
+          if (el.yearSelect) el.yearSelect.value = selectedYear;
+        } else {
+          showToast(`Timeline reaches max year ${selectedYear}.`);
+          return;
         }
-        selectedYear++;
-        selectedMonth = 0;
       }
       const mStr = String(selectedMonth + 1).padStart(2, '0');
       selectedJournalDate = `${selectedYear}-${mStr}-01`;
