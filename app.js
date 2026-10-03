@@ -375,7 +375,10 @@ const el = {
   btnPrevYear: document.getElementById('btn-prev-year'),
   btnNextYear: document.getElementById('btn-next-year'),
   btnAddFutureYear: document.getElementById('btn-add-future-year'),
+  monthPillScroll: document.getElementById('month-pill-scroll'),
   monthPills: document.getElementById('month-pills'),
+  btnPrevMonthScroll: document.getElementById('btn-prev-month-scroll'),
+  btnNextMonthScroll: document.getElementById('btn-next-month-scroll'),
 
   // Metrics (Clean 2-Card Layout)
   statTotalSpend: document.getElementById('stat-total-spend'),
@@ -702,6 +705,18 @@ function renderMonthPills() {
 
     el.monthPills.appendChild(btn);
   });
+
+  scrollActiveMonthIntoView();
+}
+
+function scrollActiveMonthIntoView() {
+  setTimeout(() => {
+    if (!el.monthPills) return;
+    const activePill = el.monthPills.querySelector('.month-pill.active');
+    if (activePill) {
+      activePill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, 50);
 }
 
 function addFutureYear() {
@@ -2207,7 +2222,10 @@ function renderCategoryChart() {
   const items = getExpensesForMonth(selectedYear, selectedMonth);
 
   if (items.length === 0) {
-    container.innerHTML = `<div style="color: var(--text-dim); font-size: 0.85rem; padding: 2rem;">No expenses recorded for this month.</div>`;
+    container.innerHTML = `<div class="empty-state-mini">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.45;"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      <span>No expenses recorded for ${MONTH_NAMES[selectedMonth]} ${selectedYear}.</span>
+    </div>`;
     return;
   }
 
@@ -2250,7 +2268,10 @@ function renderPaymentChart() {
   const items = getExpensesForMonth(selectedYear, selectedMonth);
 
   if (items.length === 0) {
-    container.innerHTML = `<div style="color: var(--text-dim); font-size: 0.85rem; padding: 2rem;">No payment breakdown available.</div>`;
+    container.innerHTML = `<div class="empty-state-mini">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.45;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      <span>No payment method breakdown for ${MONTH_NAMES[selectedMonth]} ${selectedYear}.</span>
+    </div>`;
     return;
   }
 
@@ -2741,7 +2762,31 @@ function initEventListeners() {
     }
   });
 
-  el.btnAddFutureYear.addEventListener('click', addFutureYear);
+  if (el.btnAddFutureYear) {
+    el.btnAddFutureYear.addEventListener('click', addFutureYear);
+  }
+
+  // Quick Month Stepper Arrows for Timeline Bar
+  if (el.btnPrevMonthScroll) {
+    el.btnPrevMonthScroll.addEventListener('click', () => {
+      selectedMonth = (selectedMonth - 1 + 12) % 12;
+      const mStr = String(selectedMonth + 1).padStart(2, '0');
+      selectedJournalDate = `${selectedYear}-${mStr}-01`;
+      renderAll();
+      scrollActiveMonthIntoView();
+      showToast(`${MONTH_NAMES[selectedMonth]} ${selectedYear}`);
+    });
+  }
+  if (el.btnNextMonthScroll) {
+    el.btnNextMonthScroll.addEventListener('click', () => {
+      selectedMonth = (selectedMonth + 1) % 12;
+      const mStr = String(selectedMonth + 1).padStart(2, '0');
+      selectedJournalDate = `${selectedYear}-${mStr}-01`;
+      renderAll();
+      scrollActiveMonthIntoView();
+      showToast(`${MONTH_NAMES[selectedMonth]} ${selectedYear}`);
+    });
+  }
 
   // Full Monthly Calendar Navigation
   if (el.btnCalPrevMonth) {
