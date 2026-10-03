@@ -127,30 +127,45 @@
       </div>
     </header>
 
-    <!-- Timeline Selector (Year & Months from 2026 onwards) -->
+    <!-- Timeline Selector (Year & Month Dropdown Selectors) -->
     <section class="timeline-bar">
-      <div class="year-controls">
-        <label for="year-select" class="control-label">Year:</label>
-        <div class="year-selector-wrap">
-          <!-- Clear "<" symbol for year decrement -->
-          <button id="btn-prev-year" class="btn btn-year-nav" title="Previous Year (Decrement)" aria-label="Previous Year">&lt;</button>
-          <select id="year-select" class="select-year"></select>
-          <!-- Clear ">" symbol for year increment -->
-          <button id="btn-next-year" class="btn btn-year-nav" title="Next Year (Increment)" aria-label="Next Year">&gt;</button>
+      <div class="timeline-selectors-row">
+        <!-- Year Selector -->
+        <div class="year-controls">
+          <label for="year-select" class="control-label">Year:</label>
+          <div class="year-selector-wrap">
+            <button id="btn-prev-year" class="btn btn-year-nav" title="Previous Year (Decrement)" aria-label="Previous Year">&lt;</button>
+            <select id="year-select" class="select-year"></select>
+            <button id="btn-next-year" class="btn btn-year-nav" title="Next Year (Increment)" aria-label="Next Year">&gt;</button>
+          </div>
+          <button id="btn-add-future-year" class="btn btn-ghost-sm" title="Add Next Future Year">
+            + Add Year
+          </button>
         </div>
-        <button id="btn-add-future-year" class="btn btn-ghost-sm" title="Add Next Future Year">
-          + Add Year
-        </button>
-      </div>
 
-      <div class="month-pill-scroll-wrap">
-        <button id="btn-prev-month-scroll" class="btn btn-icon btn-timeline-scroll-arrow" title="Previous Month" aria-label="Previous Month">&lt;</button>
-        <div class="month-pill-scroll" id="month-pill-scroll">
-          <div id="month-pills" class="month-pills" role="tablist" aria-label="Months">
-            <!-- Populated by JS for Jan - Dec -->
+        <!-- Month Dropdown Selector -->
+        <div class="month-controls">
+          <label for="month-select" class="control-label">Month:</label>
+          <div class="month-selector-wrap">
+            <button id="btn-prev-month" class="btn btn-year-nav" title="Previous Month" aria-label="Previous Month">&lt;</button>
+            <select id="month-select" class="select-month" title="Choose Month to View" aria-label="Choose Month">
+              <!-- Populated dynamically with Jan - Dec -->
+            </select>
+            <button id="btn-next-month" class="btn btn-year-nav" title="Next Month" aria-label="Next Month">&gt;</button>
           </div>
         </div>
-        <button id="btn-next-month-scroll" class="btn btn-icon btn-timeline-scroll-arrow" title="Next Month" aria-label="Next Month">&gt;</button>
+
+        <!-- Quick Jump to Current Month & Month Spend Badge -->
+        <div class="timeline-quick-actions">
+          <button type="button" id="btn-jump-current-month" class="btn btn-secondary btn-sm" title="Jump to Current Month">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Current Month</span>
+          </button>
+          <div class="timeline-month-spend" id="timeline-month-spend-badge" title="Total spent in selected month">
+            <span class="timeline-spend-label">Total Spend:</span>
+            <span class="timeline-spend-val" id="timeline-month-spend-val">₹0.00</span>
+          </div>
+        </div>
       </div>
     </section>
 
