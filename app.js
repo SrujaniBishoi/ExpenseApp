@@ -93,7 +93,7 @@ const CATEGORY_COLORS = {
   'Other': '#64748b'
 };
 
-// Sample seed data in INR starting from January 2026
+// Clean initial state in INR starting from January 2026 (No sample data, clean slate for all users)
 function getSampleSeedData() {
   return {
     years: [2026, 2027, 2028],
@@ -101,126 +101,9 @@ function getSampleSeedData() {
     theme: 'dark',
     exchangeRates: { ...FALLBACK_RATES_FROM_INR },
     paymentMethods: [...DEFAULT_PAYMENT_METHODS],
-    expenses: [
-      {
-        id: 'exp_202601_1',
-        year: 2026,
-        month: 0, // Jan (0-indexed)
-        date: '2026-01-02',
-        description: 'Monthly Apartment Rent',
-        category: 'Housing & Rent',
-        amount: 25000.00, // INR base
-        paymentMethodId: 'pm_netbanking',
-        notes: 'Monthly fixed lease via NEFT transfer'
-      },
-      {
-        id: 'exp_202601_2',
-        year: 2026,
-        month: 0,
-        date: '2026-01-05',
-        description: 'Supermarket Groceries & Pantry',
-        category: 'Groceries',
-        amount: 3450.00,
-        paymentMethodId: 'pm_upi',
-        notes: 'Reliance Fresh monthly pantry restocking'
-      },
-      {
-        id: 'exp_202601_3',
-        year: 2026,
-        month: 0,
-        date: '2026-01-08',
-        description: 'Electricity & Internet Bill',
-        category: 'Utilities',
-        amount: 1850.00,
-        paymentMethodId: 'pm_upi',
-        notes: 'Power grid + fiber broadband'
-      },
-      {
-        id: 'exp_202601_4',
-        year: 2026,
-        month: 0,
-        date: '2026-01-12',
-        description: 'Family Dinner at Restaurant',
-        category: 'Food & Dining',
-        amount: 1200.00,
-        paymentMethodId: 'pm_credit',
-        notes: 'Weekend dinner'
-      },
-      {
-        id: 'exp_202601_5',
-        year: 2026,
-        month: 0,
-        date: '2026-01-18',
-        description: 'Metro Card Reload & Uber Rides',
-        category: 'Transportation',
-        amount: 950.00,
-        paymentMethodId: 'pm_upi',
-        notes: 'Commuting recharge'
-      },
-      {
-        id: 'exp_202601_6',
-        year: 2026,
-        month: 0,
-        date: '2026-01-22',
-        description: 'OTT & Cloud Subscriptions',
-        category: 'Subscriptions',
-        amount: 699.00,
-        paymentMethodId: 'pm_credit',
-        notes: 'Music & cloud storage'
-      },
-      {
-        id: 'exp_202601_7',
-        year: 2026,
-        month: 0,
-        date: '2026-01-27',
-        description: 'Local Sabzi Mandi (Fruits & Vegetables)',
-        category: 'Groceries',
-        amount: 450.00,
-        paymentMethodId: 'pm_cash',
-        notes: 'Fresh weekly produce'
-      },
-      {
-        id: 'exp_202601_8',
-        year: 2026,
-        month: 0,
-        date: '2026-01-20',
-        description: 'Flight Tickets for Business Summit',
-        category: 'Travel',
-        amount: 6500.00,
-        paymentMethodId: 'pm_hdfc_diners',
-        notes: 'HDFC Diners air miles & lounge access'
-      },
-      {
-        id: 'exp_202609_hdfc',
-        year: 2026,
-        month: 8, // September (0-indexed: 8)
-        date: '2026-09-22',
-        description: 'Electronics & Gadgets Purchase',
-        category: 'Shopping',
-        amount: 4500.00,
-        paymentMethodId: 'pm_hdfc_diners',
-        notes: 'HDFC Diners post-due spend (incurred 22 Sep after 20 Sep due date, billed in Oct bill due 20 Oct)'
-      }
-    ],
-    // Stored per day: YYYY-MM-DD
-    journals: {
-      '2026-01-02': `[Daily Reflection] First working Friday of 2026. Paid rent on time via NetBanking.
-[Today's Spend] Transferred ₹25,000 for rent. Budget is well calibrated for this month.`,
-      '2026-01-05': `[Today's Spend] Restocked monthly staples at Reliance Fresh for ₹3,450 using UPI.
-[Daily Win] Stuck strictly to the grocery list and avoided impulse purchases.`
-    },
-    // Payments made towards credit card bills (with date paid, amount, and notes)
-    creditCardPayments: [
-      {
-        id: 'ccpay_202601_1',
-        year: 2026,
-        month: 0,
-        paymentMethodId: 'pm_credit',
-        date: '2026-01-15',
-        amount: 1200.00,
-        notes: 'Paid restaurant dinner balance via UPI / GPay'
-      }
-    ]
+    expenses: [],
+    journals: {},
+    creditCardPayments: []
   };
 }
 
@@ -385,9 +268,34 @@ function loadState(targetUsername) {
         parsed.paymentMethods = [...DEFAULT_PAYMENT_METHODS];
       }
 
-      // Ensure credit card payments array exists
-      if (!Array.isArray(parsed.creditCardPayments)) {
+      // Filter out any legacy sample/demo expenses or mock entries
+      const SAMPLE_EXPENSE_IDS = new Set([
+        'exp_202601_1', 'exp_202601_2', 'exp_202601_3', 'exp_202601_4', 
+        'exp_202601_5', 'exp_202601_6', 'exp_202601_7', 'exp_202601_8', 
+        'exp_202609_hdfc'
+      ]);
+      const SAMPLE_PAYMENT_IDS = new Set(['ccpay_202601_1']);
+
+      if (Array.isArray(parsed.expenses)) {
+        parsed.expenses = parsed.expenses.filter(x => !SAMPLE_EXPENSE_IDS.has(x.id));
+      } else {
+        parsed.expenses = [];
+      }
+
+      // Ensure credit card payments array exists and filter sample payments
+      if (Array.isArray(parsed.creditCardPayments)) {
+        parsed.creditCardPayments = parsed.creditCardPayments.filter(x => !SAMPLE_PAYMENT_IDS.has(x.id));
+      } else {
         parsed.creditCardPayments = [];
+      }
+
+      if (parsed.journals) {
+        if (parsed.journals['2026-01-02'] && parsed.journals['2026-01-02'].includes('First working Friday of 2026')) {
+          delete parsed.journals['2026-01-02'];
+        }
+        if (parsed.journals['2026-01-05'] && parsed.journals['2026-01-05'].includes('Reliance Fresh')) {
+          delete parsed.journals['2026-01-05'];
+        }
       }
 
       // Save into the per-user key
@@ -395,18 +303,12 @@ function loadState(targetUsername) {
       return parsed;
     }
   } catch (err) {
-    console.warn('Failed to load saved state, falling back to seed data:', err);
+    console.warn('Failed to load saved state, falling back to clean data:', err);
   }
 
-  const seed = getSampleSeedData();
-  if (uname !== 'srujani') {
-    // For non-admin new accounts, start with empty expenses & journals
-    seed.expenses = [];
-    seed.journals = {};
-    seed.creditCardPayments = [];
-  }
-  localStorage.setItem(key, JSON.stringify(seed));
-  return seed;
+  const cleanState = getSampleSeedData();
+  localStorage.setItem(key, JSON.stringify(cleanState));
+  return cleanState;
 }
 
 let cloudSyncDebounceTimer = null;
@@ -598,7 +500,6 @@ const el = {
   labelClearMonth: document.getElementById('label-clear-month'),
   btnClearMonthExpenses: document.getElementById('btn-clear-month-expenses'),
   btnClearExpenses: document.getElementById('btn-clear-expenses'),
-  btnResetDemo: document.getElementById('btn-reset-demo'),
 
   // User Profile & Authentication Elements
   authOverlay: document.getElementById('auth-overlay'),
@@ -2721,19 +2622,6 @@ function clearAllExpenses() {
   }
 }
 
-function resetToDemo() {
-  if (confirm('Are you sure you want to reset to sample data starting January 2026? Any custom data will be replaced.')) {
-    appState = getSampleSeedData();
-    selectedYear = 2026;
-    selectedMonth = 0;
-    selectedJournalDate = '2026-01-02';
-    saveStateToStorage();
-    renderYearOptions();
-    renderAll();
-    showToast('Reset to clean initial state (INR)');
-  }
-}
-
 // -----------------------------------------------------------------------------
 // Utilities & Helper
 // -----------------------------------------------------------------------------
@@ -3367,7 +3255,6 @@ function initEventListeners() {
   if (el.btnClearExpenses) {
     el.btnClearExpenses.addEventListener('click', clearAllExpenses);
   }
-  el.btnResetDemo.addEventListener('click', resetToDemo);
 
   // Close modals on backdrop click
   [el.expenseModal, el.paymentMethodsModal, el.creditCardDuesModal, el.userManagementModal].forEach(modal => {
@@ -3443,27 +3330,50 @@ async function handleFirebaseUserSignedIn(user) {
       const snap = await fbDb.collection('users').doc(uid).get();
       if (snap.exists) {
         const cloudData = snap.data();
+        let cloudExpenses = (cloudData.expenses || []).filter(x => !x.id.startsWith('exp_202601_') && x.id !== 'exp_202609_hdfc');
+        let cloudPayments = (cloudData.creditCardPayments || []).filter(x => x.id !== 'ccpay_202601_1');
+        let cloudJournals = cloudData.dailyJournals || {};
+        if (cloudJournals['2026-01-02'] && cloudJournals['2026-01-02'].includes('First working Friday')) {
+          delete cloudJournals['2026-01-02'];
+        }
+        if (cloudJournals['2026-01-05'] && cloudJournals['2026-01-05'].includes('Reliance Fresh')) {
+          delete cloudJournals['2026-01-05'];
+        }
+
         appState = {
           currency: cloudData.currency || 'INR',
           theme: cloudData.theme || 'dark',
           exchangeRates: Object.assign({}, FALLBACK_RATES_FROM_INR, cloudData.exchangeRates || {}),
           paymentMethods: cloudData.paymentMethods || DEFAULT_PAYMENT_METHODS,
-          expenses: cloudData.expenses || [],
-          creditCardPayments: cloudData.creditCardPayments || [],
-          dailyJournals: cloudData.dailyJournals || {},
+          expenses: cloudExpenses,
+          creditCardPayments: cloudPayments,
+          dailyJournals: cloudJournals,
           years: Array.from(new Set([2026, ...(cloudData.years || [])])).sort((a,b) => a-b)
         };
         loaded = true;
         setCloudSyncStatus('ready', 'Cloud');
       } else {
-        // Initializing new cloud account document
+        // Initializing new cloud account document with 100% clean data
         let initialData = null;
         try {
-          const rawLocal = localStorage.getItem(`expense_app_data_v1_${currentSession.username}`) || localStorage.getItem('expense_app_data_v1_srujani');
-          if (rawLocal) initialData = JSON.parse(rawLocal);
+          const rawLocal = localStorage.getItem(`expense_app_data_v1_${currentSession.username}`);
+          if (rawLocal) {
+            initialData = JSON.parse(rawLocal);
+            if (Array.isArray(initialData.expenses)) {
+              initialData.expenses = initialData.expenses.filter(x => !x.id.startsWith('exp_202601_') && x.id !== 'exp_202609_hdfc');
+            }
+          }
         } catch (e) {}
 
         appState = initialData || getSampleSeedData();
+        // Ensure new accounts always start completely clean
+        if (!initialData || !Array.isArray(appState.expenses)) {
+          appState.expenses = [];
+          appState.journals = {};
+          appState.dailyJournals = {};
+          appState.creditCardPayments = [];
+        }
+
         await fbDb.collection('users').doc(uid).set({
           profile: {
             uid: uid,
@@ -3473,7 +3383,7 @@ async function handleFirebaseUserSignedIn(user) {
             createdAt: new Date().toISOString()
           },
           expenses: appState.expenses || [],
-          paymentMethods: appState.paymentMethods || [],
+          paymentMethods: appState.paymentMethods || DEFAULT_PAYMENT_METHODS,
           creditCardPayments: appState.creditCardPayments || [],
           dailyJournals: appState.dailyJournals || {},
           currency: appState.currency || 'INR',
