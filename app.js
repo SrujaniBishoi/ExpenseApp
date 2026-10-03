@@ -1700,8 +1700,8 @@ function renderCreditCardDuesModal() {
         <div class="cc-due-config-wrap">
           <label class="cc-due-label" for="due-day-input-${pm.id}">Due Day:</label>
           <input type="number" id="due-day-input-${pm.id}" class="cc-due-day-input" min="1" max="31" value="${cycle.configuredDueDay}" title="Enter day of month (1-31) when this card's bill is due">
-          <div class="cc-cycle-range-tag" title="Billing cycle: spendings from day after prev due date till this due date">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:3px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Cycle: ${escapeHtml(cycle.startDateStr)} to ${escapeHtml(cycle.endDateStr)} • Due: ${escapeHtml(cycle.dueDateStr)}
+          <div class="cc-cycle-range-tag" title="Cycle End Date: ${escapeHtml(cycle.dueDateStr)}">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="display:inline-block; vertical-align:middle; margin-right:3px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>End Date: ${escapeHtml(cycle.dueDateStr)}
           </div>
           <span class="cc-due-status-badge ${statusClass}">${statusText}</span>
         </div>
