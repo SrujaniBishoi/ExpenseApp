@@ -409,31 +409,45 @@
   <aside id="side-menu-drawer" class="side-menu-drawer" aria-label="Analytics &amp; Summaries Side Menu" role="complementary">
     <!-- Header -->
     <div class="side-menu-header">
-      <div class="side-menu-title-group">
-        <div class="side-menu-icon-badge">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <line x1="18" y1="20" x2="18" y2="10"/>
-            <line x1="12" y1="20" x2="12" y2="4"/>
-            <line x1="6" y1="20" x2="6" y2="14"/>
+      <div class="side-menu-header-left">
+        <!-- Back Button: Highly visible return to main dashboard -->
+        <button id="btn-back-side-menu" class="btn btn-side-menu-back" title="Back to Dashboard" aria-label="Back to Dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
-        </div>
-        <div>
-          <h2 class="side-menu-title">Analytics &amp; Summaries</h2>
-          <span class="side-menu-subtitle">Insights, Breakdown &amp; Annual Reports</span>
+          <span>Back</span>
+        </button>
+
+        <div class="side-menu-title-group">
+          <div class="side-menu-icon-badge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="18" y1="20" x2="18" y2="10"/>
+              <line x1="12" y1="20" x2="12" y2="4"/>
+              <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+          </div>
+          <div class="side-menu-title-texts">
+            <h2 class="side-menu-title">Analytics &amp; Summaries</h2>
+            <span class="side-menu-subtitle">Insights, Breakdown &amp; Annual Reports</span>
+          </div>
         </div>
       </div>
+
       <div class="side-menu-header-actions">
-        <button id="btn-dock-side-menu" class="btn btn-icon btn-ghost-sm" title="Pin / Dock Side Menu (Desktop)" aria-label="Dock Side Menu">
+        <button id="btn-dock-side-menu" class="btn btn-icon" title="Pin / Dock Side Menu (Desktop)" aria-label="Dock Side Menu">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
             <line x1="15" y1="3" x2="15" y2="21"/>
           </svg>
         </button>
-        <button id="btn-close-side-menu" class="btn btn-icon btn-ghost-sm" title="Close Side Menu" aria-label="Close Side Menu">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <!-- Distinct, prominent X Close Button -->
+        <button id="btn-close-side-menu" class="btn btn-side-menu-close" title="Close Side Menu (Esc)" aria-label="Close Side Menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="18" y1="6" x2="6" y2="18"/>
             <line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
+          <span class="close-btn-text">Close</span>
         </button>
       </div>
     </div>
