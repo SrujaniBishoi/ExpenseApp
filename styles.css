@@ -301,21 +301,27 @@ body {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border-color);
-  padding: 0.75rem 1.75rem;
+  padding: 0.65rem 1.75rem;
+}
+
+.timeline-selectors-row {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
+  width: 100%;
   flex-wrap: wrap;
 }
 
-.year-controls {
+.year-controls,
+.month-controls {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   background-color: var(--bg-surface-elevated);
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .control-label {
@@ -324,19 +330,20 @@ body {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-left: 4px;
+  margin-left: 2px;
 }
 
-.year-selector-wrap {
+.year-selector-wrap,
+.month-selector-wrap {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-/* Prominent, clean "<" and ">" Year Buttons */
+/* Prominent, clean "<" and ">" Buttons */
 .btn-year-nav {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
   background: var(--bg-surface);
@@ -346,7 +353,7 @@ body {
   justify-content: center;
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 800;
   transition: all var(--transition-fast);
   user-select: none;
@@ -366,21 +373,24 @@ body {
   transform: scale(0.95);
 }
 
-.select-year {
+.select-year,
+.select-month {
   background: transparent;
   color: var(--text-main);
   border: none;
   font-family: var(--font-sans);
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
-  padding: 4px 6px;
+  padding: 4px 8px;
   cursor: pointer;
   outline: none;
 }
 
-.select-year option {
+.select-year option,
+.select-month option {
   background-color: var(--bg-surface);
   color: var(--text-main);
+  padding: 6px 10px;
 }
 
 .btn-ghost-sm {
@@ -399,129 +409,37 @@ body {
   background: var(--primary-soft);
 }
 
-.month-pill-scroll-wrap {
-  flex: 1;
-  min-width: 0;
+.timeline-quick-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  position: relative;
+  gap: 0.85rem;
+  margin-left: auto;
 }
 
-.btn-timeline-scroll-arrow {
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-color);
-  background: var(--bg-surface-elevated);
-  color: var(--text-main);
+.timeline-month-spend {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-family: var(--font-mono);
-  font-weight: 800;
-  font-size: 0.95rem;
-  line-height: 1;
-  padding: 0;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-  user-select: none;
-}
-
-.btn-timeline-scroll-arrow:hover {
-  background: var(--primary);
-  color: #ffffff;
-  border-color: var(--primary);
-  transform: scale(1.05);
-  box-shadow: 0 2px 8px var(--primary-glow);
-}
-
-.btn-timeline-scroll-arrow:active {
-  transform: scale(0.95);
-}
-
-.month-pill-scroll {
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-  display: flex;
-  align-items: center;
-  padding: 4px 2px;
-}
-
-.month-pill-scroll::-webkit-scrollbar {
-  height: 4px;
-}
-
-.month-pill-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.month-pill-scroll::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: var(--radius-full);
-}
-
-.month-pill-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--primary);
-}
-
-.month-pills {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 2px 0;
-  width: max-content;
-}
-
-.month-pill {
-  appearance: none;
+  gap: 0.45rem;
+  padding: 5px 12px;
+  background: var(--bg-surface-elevated);
   border: 1px solid var(--border-color);
-  background: var(--bg-surface);
-  color: var(--text-muted);
-  border-radius: var(--radius-full);
-  padding: 0.45rem 1rem;
+  border-radius: var(--radius-md);
   font-size: 0.85rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.timeline-spend-label {
+  color: var(--text-muted);
   font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
-.month-pill:hover {
-  color: var(--text-main);
-  border-color: var(--primary);
-  background: var(--bg-surface-hover);
-  transform: translateY(-1px);
-}
-
-.month-pill.active {
-  background: var(--primary);
-  color: #ffffff;
-  border-color: var(--primary);
-  box-shadow: 0 4px 12px var(--primary-glow);
-}
-
-.month-pill .pill-badge {
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: var(--radius-full);
-  background: rgba(0, 0, 0, 0.16);
+.timeline-spend-val {
+  color: var(--primary);
+  font-weight: 800;
   font-family: var(--font-mono);
-}
-
-.month-pill.active .pill-badge {
-  background: rgba(255, 255, 255, 0.28);
-  color: #ffffff;
 }
 
 /* -----------------------------------------------------------------------------
@@ -2752,15 +2670,19 @@ input[type="radio"],
     gap: 0.75rem;
   }
 
-  /* Full-width, comfortable mobile timeline */
+  /* Responsive mobile timeline selectors */
   .timeline-bar {
+    padding: 0.65rem 0.85rem;
+  }
+
+  .timeline-selectors-row {
     flex-direction: column;
     align-items: stretch;
-    padding: 0.65rem 0.85rem;
     gap: 0.65rem;
   }
 
-  .year-controls {
+  .year-controls,
+  .month-controls {
     width: 100%;
     display: flex;
     justify-content: space-between;
@@ -2769,37 +2691,17 @@ input[type="radio"],
     box-shadow: var(--shadow-sm);
   }
 
-  .month-pill-scroll-wrap {
+  .timeline-quick-actions {
     width: 100%;
+    margin-left: 0;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.4rem;
   }
 
-  .month-pill-scroll {
-    width: 100%;
+  .timeline-month-spend {
     flex: 1;
-    min-width: 0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-    padding: 4px 2px 6px 2px;
-  }
-
-  .month-pills {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    width: max-content;
-    padding: 2px;
-  }
-
-  .month-pill {
-    flex-shrink: 0;
-    min-height: 40px;
-    padding: 0.48rem 0.95rem;
-    font-size: 0.88rem;
-    scroll-snap-align: center;
+    justify-content: center;
   }
 
   /* Prevent browser viewport auto-zoom when tapping inputs on iOS/Android */
@@ -2853,24 +2755,17 @@ input[type="radio"],
 
   .timeline-bar {
     padding: 0.5rem 0.65rem;
-    gap: 0.55rem;
   }
 
-  .year-controls {
+  .year-controls,
+  .month-controls {
     padding: 4px 8px;
   }
 
-  .btn-timeline-scroll-arrow {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-    font-size: 0.85rem;
-  }
-
-  .month-pill {
-    min-height: 38px;
-    padding: 0.42rem 0.8rem;
-    font-size: 0.82rem;
+  .timeline-quick-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
   }
 
   .metrics-grid {
