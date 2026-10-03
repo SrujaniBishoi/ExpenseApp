@@ -196,12 +196,42 @@ body {
   flex-shrink: 0;
 }
 
+.brand-wallet-btn {
+  border: none;
+  cursor: pointer;
+  outline: none;
+  padding: 0;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.brand-wallet-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.55);
+}
+
+.brand-wallet-btn:active {
+  transform: scale(0.96);
+}
+
+.brand-link {
+  text-decoration: none;
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.brand-link:hover .brand-title {
+  color: var(--primary);
+}
+
 .brand-title {
   font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: -0.025em;
   color: var(--text-main);
   line-height: 1.1;
+  transition: color 0.2s ease;
 }
 
 .brand-tag {
@@ -3187,6 +3217,38 @@ input[type="radio"],
   .sidebar-metrics-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* Sidebar Configure Payment Methods Button */
+.btn-sidebar-configure-pm {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.72rem 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-sidebar-configure-pm:hover {
+  transform: translateY(-1px);
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.18);
+}
+
+.btn-sidebar-configure-pm svg {
+  flex-shrink: 0;
 }
 
 /* ==========================================================================
