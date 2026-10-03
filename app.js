@@ -452,6 +452,13 @@ const el = {
   btnCyclePostDue: document.getElementById('btn-cycle-post-due'),
   ccCycleTabMonthName: document.getElementById('cc-cycle-tab-month-name'),
 
+  // Annual Summary Modal & Controls
+  btnOpenAnnualSummary: document.getElementById('btn-open-annual-summary'),
+  annualSummaryModal: document.getElementById('annual-summary-modal'),
+  btnCloseAnnualModal: document.getElementById('btn-close-annual-modal'),
+  btnDoneAnnualModal: document.getElementById('btn-done-annual-modal'),
+  annualModalYearBadge: document.getElementById('annual-modal-year-badge'),
+
   // View Navigation
   viewTabs: document.querySelectorAll('.view-tab'),
   monthlyView: document.getElementById('monthly-view'),
@@ -700,6 +707,7 @@ function renderYearOptions() {
 
   if (el.annualTabYear) el.annualTabYear.textContent = selectedYear;
   if (el.annualHeaderYear) el.annualHeaderYear.textContent = selectedYear;
+  if (el.annualModalYearBadge) el.annualModalYearBadge.textContent = selectedYear;
 }
 
 function renderMonthPills() {
@@ -2316,11 +2324,12 @@ function renderPaymentChart() {
 }
 
 // -----------------------------------------------------------------------------
-// Annual Summary View & Chart
+// Annual Summary View, Modal & Chart
 // -----------------------------------------------------------------------------
 function renderAnnualView() {
-  el.annualTabYear.textContent = selectedYear;
-  el.annualHeaderYear.textContent = selectedYear;
+  if (el.annualTabYear) el.annualTabYear.textContent = selectedYear;
+  if (el.annualHeaderYear) el.annualHeaderYear.textContent = selectedYear;
+  if (el.annualModalYearBadge) el.annualModalYearBadge.textContent = selectedYear;
 
   el.annualTbody.innerHTML = '';
   let annualGrandTotalInInr = 0;
@@ -2377,6 +2386,7 @@ function renderAnnualView() {
       selectedMonth = m;
       const mStr = String(m + 1).padStart(2, '0');
       selectedJournalDate = `${selectedYear}-${mStr}-01`;
+      closeAnnualSummaryModal();
       switchView('monthly-view');
       renderAll();
     });
@@ -2396,6 +2406,25 @@ function renderAnnualView() {
   `;
 
   renderAnnualChart(monthData);
+}
+
+function openAnnualSummaryModal() {
+  if (!el.annualSummaryModal) return;
+  renderAnnualView();
+  if (typeof el.annualSummaryModal.showModal === 'function') {
+    el.annualSummaryModal.showModal();
+  } else {
+    el.annualSummaryModal.setAttribute('open', '');
+  }
+}
+
+function closeAnnualSummaryModal() {
+  if (!el.annualSummaryModal) return;
+  if (typeof el.annualSummaryModal.close === 'function') {
+    el.annualSummaryModal.close();
+  } else {
+    el.annualSummaryModal.removeAttribute('open');
+  }
 }
 
 function renderAnnualChart(monthData) {
@@ -2454,7 +2483,7 @@ function switchView(targetView) {
   if (targetView === 'monthly-view') {
     if (el.monthlyView) el.monthlyView.classList.add('active');
   } else if (targetView === 'annual-view') {
-    openSideMenu('side-annual-summary');
+    openAnnualSummaryModal();
   }
 }
 
@@ -2470,7 +2499,7 @@ function openSideMenu(targetTabId = null) {
     if (currentActive) {
       switchSideTab(currentActive.dataset.sideTab);
     } else {
-      switchSideTab('side-annual-summary');
+      switchSideTab('side-spending-category');
     }
   }
 }
@@ -2505,9 +2534,7 @@ function switchSideTab(tabId) {
     panel.classList.toggle('active', panel.id === tabId);
   });
 
-  if (tabId === 'side-annual-summary') {
-    renderAnnualView();
-  } else if (tabId === 'side-spending-category') {
+  if (tabId === 'side-spending-category') {
     renderCategoryChart();
   } else if (tabId === 'side-spending-payment') {
     renderPaymentChart();
@@ -2682,7 +2709,7 @@ function renderAll() {
   if (el.labelClearMonth) {
     el.labelClearMonth.textContent = `Clear ${MONTH_NAMES[selectedMonth]} ${selectedYear} Expenses`;
   }
-  if (activeView === 'annual-view') {
+  if (activeView === 'annual-view' || (el.annualSummaryModal && (el.annualSummaryModal.open || el.annualSummaryModal.hasAttribute('open')))) {
     renderAnnualView();
   }
 }
@@ -3006,6 +3033,17 @@ function initEventListeners() {
       currentCcCycleMode = 'post-due';
       renderCreditCardDuesModal();
     });
+  }
+
+  // Annual Summary Modal Controls
+  if (el.btnOpenAnnualSummary) {
+    el.btnOpenAnnualSummary.addEventListener('click', openAnnualSummaryModal);
+  }
+  if (el.btnCloseAnnualModal) {
+    el.btnCloseAnnualModal.addEventListener('click', closeAnnualSummaryModal);
+  }
+  if (el.btnDoneAnnualModal) {
+    el.btnDoneAnnualModal.addEventListener('click', closeAnnualSummaryModal);
   }
 
   // Backup Menu Dropdown
@@ -3340,10 +3378,16 @@ function initEventListeners() {
   }
 
   // Close modals on backdrop click
-  [el.expenseModal, el.paymentMethodsModal, el.creditCardDuesModal, el.userManagementModal].forEach(modal => {
+  [el.expenseModal, el.paymentMethodsModal, el.creditCardDuesModal, el.userManagementModal, el.annualSummaryModal].forEach(modal => {
     if (modal) {
       modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.close();
+        if (e.target === modal) {
+          if (modal === el.annualSummaryModal) {
+            closeAnnualSummaryModal();
+          } else {
+            modal.close();
+          }
+        }
       });
     }
   });
